@@ -38,7 +38,9 @@
       "Bash(start /B dotnet run)",
       "mcp__SharpTools__SharpTool_FindAndReplace",
       "WebFetch(domain:lexical.dev)",
-      "Bash(npx kill-port:*)"
+      "Bash(npx kill-port:*)",
+      "Bash(git pull:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
