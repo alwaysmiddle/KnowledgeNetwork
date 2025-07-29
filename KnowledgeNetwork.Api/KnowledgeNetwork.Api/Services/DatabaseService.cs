@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+using Npgsql;
 using KnowledgeNetwork.Api.Models;
 
 namespace KnowledgeNetwork.Api.Services;
