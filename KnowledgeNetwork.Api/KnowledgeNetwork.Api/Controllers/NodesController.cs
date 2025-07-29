@@ -6,11 +6,11 @@ namespace KnowledgeNetwork.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class NodesController : ControllerBase
+public class RepositoryNetworkController : ControllerBase
 {
     private readonly DatabaseService _databaseService;
 
-    public NodesController(DatabaseService databaseService)
+    public RepositoryNetworkController(DatabaseService databaseService)
     {
         _databaseService = databaseService;
     }
