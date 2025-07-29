@@ -3,19 +3,18 @@ using KnowledgeNetwork.Api.Models;
 using KnowledgeNetwork.Api.Services;
 
 namespace KnowledgeNetwork.Api.Controllers;
-
 [ApiController]
-[Route("api/[controller]")]
-public class RepositoryNetworkController : ControllerBase
+[Route("api/graphics-engine")]
+public class GraphicsEngineController : ControllerBase
 {
     private readonly DatabaseService _databaseService;
 
-    public RepositoryNetworkController(DatabaseService databaseService)
+    public GraphicsEngineController(DatabaseService databaseService)
     {
         _databaseService = databaseService;
     }
 
-    [HttpGet]
+    [HttpGet("nodes")]
     public async Task<ActionResult<List<Node>>> GetNodes()
     {
         try
@@ -29,7 +28,21 @@ public class RepositoryNetworkController : ControllerBase
         }
     }
 
-    [HttpPost]
+    [HttpGet("nodes/{id}")]
+    public async Task<ActionResult<Node>> GetNode(int id)
+    {
+        try
+        {
+            // TODO: Implement GetNodeByIdAsync in DatabaseService
+            return NotFound(new { error = "GetNode by ID not yet implemented" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "Failed to retrieve node", message = ex.Message });
+        }
+    }
+
+    [HttpPost("nodes")]
     public async Task<ActionResult<Node>> CreateNode(CreateNodeRequest request)
     {
         try
@@ -40,7 +53,7 @@ public class RepositoryNetworkController : ControllerBase
             }
 
             var node = await _databaseService.CreateNodeAsync(request);
-            return CreatedAtAction(nameof(GetNodes), new { id = node.Id }, node);
+            return CreatedAtAction(nameof(GetNode), new { id = node.Id }, node);
         }
         catch (Exception ex)
         {
