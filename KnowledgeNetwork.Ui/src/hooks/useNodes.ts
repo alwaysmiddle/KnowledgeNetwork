@@ -16,16 +16,20 @@ export const useNodes = (): UseNodesResult => {
 
   const fetchNodes = async () => {
     try {
+      console.log('🚀 useNodes: Starting fetch process...');
       setLoading(true);
       setError(null);
       
       // Check if API is healthy first
+      console.log('🏥 useNodes: Checking API health...');
       const isHealthy = await ApiService.checkHealth();
       if (!isHealthy) {
         throw new Error('API is not available');
       }
+      console.log('✅ useNodes: API is healthy');
       
       const fetchedNodes = await ApiService.fetchNodes();
+      console.log('📋 useNodes: Setting nodes, count:', fetchedNodes.length);
       setNodes(fetchedNodes);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';

@@ -22,11 +22,19 @@ function KnowledgeNavigator(){
   const { nodes: apiNodes, loading, error } = useNodes();
 
   useEffect(()=>{
-    if(!currentLayer && apiNodes.length > 0){
+    console.log('🎯 KnowledgeNavigator: Effect triggered', {
+      currentLayerLength: currentLayer?.length || 0,
+      apiNodesLength: apiNodes.length,
+      loading,
+      error
+    });
+    
+    if((!currentLayer || currentLayer.length === 0) && apiNodes.length > 0){
+      console.log('🔄 KnowledgeNavigator: Setting current layer with', apiNodes.length, 'nodes');
       setCurrentLayer(apiNodes);
     }
   },
-  [currentLayer, apiNodes, setCurrentLayer]);
+  [currentLayer, apiNodes, setCurrentLayer, loading, error]);
 
   const onConnect: OnConnect = useCallback(
     (connection) => setEdges((edges) => addEdge(connection, edges)),
@@ -57,6 +65,7 @@ function KnowledgeNavigator(){
 
   // Show loading state
   if (loading) {
+    console.log('⏳ KnowledgeNavigator: Rendering loading state');
     return (
       <div style={{ 
         display: 'flex', 
@@ -72,6 +81,7 @@ function KnowledgeNavigator(){
 
   // Show error state
   if (error) {
+    console.log('❌ KnowledgeNavigator: Rendering error state:', error);
     return (
       <div style={{ 
         display: 'flex', 
@@ -92,6 +102,7 @@ function KnowledgeNavigator(){
 
   // Show empty state if no nodes loaded
   if (!currentLayer || currentLayer.length === 0) {
+    console.log('🔍 KnowledgeNavigator: Rendering empty state. Current layer:', currentLayer);
     return (
       <div style={{ 
         display: 'flex', 
@@ -106,6 +117,9 @@ function KnowledgeNavigator(){
     );
   }
 
+  console.log('🎨 KnowledgeNavigator: Rendering ReactFlow with', currentLayer.length, 'nodes');
+  console.log('🎨 Nodes data:', currentLayer);
+  
   return (
     <ReactFlow
       nodes={currentLayer}

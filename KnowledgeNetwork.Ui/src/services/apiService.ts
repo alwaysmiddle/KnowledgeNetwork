@@ -18,16 +18,18 @@ export class ApiService {
   // Fetch nodes from the API
   static async fetchNodes(): Promise<UnionNode[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/nodes`);
+      console.log('🔄 Fetching nodes from API...');
+      const response = await fetch(`${API_BASE_URL}/graphics-engine/nodes`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const apiNodes: ApiNodeResponse[] = await response.json();
+      console.log('📦 Received API nodes:', apiNodes.length, 'nodes');
       
       // Transform API response to match our React Flow node structure
-      return apiNodes.map((apiNode, index) => ({
+      const transformedNodes = apiNodes.map((apiNode, index) => ({
         id: apiNode.id.toString(),
         type: "knowledge-node",
         position: { 
@@ -47,8 +49,12 @@ export class ApiService {
           },
         },
       }));
+      
+      console.log('✅ Transformed nodes for ReactFlow:', transformedNodes.length, 'nodes');
+      console.log('🔍 Sample node:', transformedNodes[0]);
+      return transformedNodes;
     } catch (error) {
-      console.error('Error fetching nodes from API:', error);
+      console.error('❌ Error fetching nodes from API:', error);
       // Return empty array on error - you can enhance this later
       return [];
     }
@@ -61,7 +67,13 @@ export class ApiService {
       return response.ok;
     } catch (error) {
       console.error('API health check failed:', error);
-      return false;
+      // If health endpoint fails, try the nodes endpoint as fallback
+      try {
+        const fallbackResponse = await fetch(`${API_BASE_URL}/graphics-engine/nodes`);
+        return fallbackResponse.ok;
+      } catch {
+        return false;
+      }
     }
   }
 }

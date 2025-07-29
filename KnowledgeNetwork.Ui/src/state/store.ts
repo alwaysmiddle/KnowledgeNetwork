@@ -1,7 +1,15 @@
-import { configureStore } from "@reduxjs/toolkit"
+import { configureStore, createSlice } from "@reduxjs/toolkit"
+
+// Minimal slice to fix the empty reducer issue
+const appSlice = createSlice({
+  name: 'app',
+  initialState: { initialized: true },
+  reducers: {}
+});
 
 export const store = configureStore({
   reducer:{
+    app: appSlice.reducer,
   },
   //middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(logger),
 })
