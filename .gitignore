@@ -43,6 +43,9 @@ obj/
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 
+# Claude
+.claude/
+
 # JetBrains Rider
 .idea/
 *.sln.iml
@@ -99,3 +102,4 @@ coverage/
 *.launch
 .settings/
 *.sublime-workspace
+.claude/local.settings.json
