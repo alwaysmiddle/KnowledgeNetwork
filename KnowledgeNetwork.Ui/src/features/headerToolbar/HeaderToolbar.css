@@ -1,0 +1,20 @@
+.header-toolbar-sub-container {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  margin: 0;
+  grid-template: 1fr 1fr/ 1fr 1fr;
+  grid-template-areas: 
+    "rn rn"
+    "pn pn";
+}
+
+.header-toolbar-recent-nodes{
+  grid-area: rn;
+  background-color: lightcyan;
+}
+
+.header-toolbar-planned-nodes{
+  grid-area: pn;
+  background-color: lightgreen;
+}

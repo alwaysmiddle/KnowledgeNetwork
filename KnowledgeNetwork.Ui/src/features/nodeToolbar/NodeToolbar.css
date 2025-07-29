@@ -1,0 +1,25 @@
+/* Toolbar.css */
+.node-toolbar {
+  position: absolute;
+  background-color: white;
+  border: 2px solid lightblue;
+  border-radius: 5px;
+  padding: 1px;
+  display: flex;
+  top: -25px;
+  flex-direction: row; /* Align buttons in a row */
+  z-index: 10;
+}
+
+.node-toolbar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px; /* Set button dimensions */
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 1px;
+  cursor: pointer;
+}

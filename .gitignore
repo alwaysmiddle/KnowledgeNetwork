@@ -1,0 +1,101 @@
+# Documents folder (contains roadmap and vision)
+documents/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+dist/
+dist-ssr/
+*.local
+build/
+
+# .NET / C#
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+*.log
+
+# Visual Studio
+.vs/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln.local
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Process files
+*.pid
+nul
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Backup files
+*_backup/
+*.bak
+
+# Package lock files (uncomment if you want to ignore them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Editor directories and files
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace

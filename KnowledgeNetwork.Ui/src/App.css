@@ -1,0 +1,43 @@
+.container {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 40px repeat(11, 1fr);
+  grid-template-rows: 86px repeat(3, 1fr);
+  grid-template-areas:
+    "m h h h h h h h h h h h"
+    "m nc nc nc nc nc kn kn kn kn mini-a mini-a"
+    "m nc nc nc nc nc kn kn kn kn mini-b mini-b"
+    "m nc nc nc nc nc kn kn kn kn mini-b mini-b";
+}
+
+.header-toolbar {
+  grid-area: h;
+  background-color: aqua;
+}
+
+.menu {
+  grid-area: m;
+  background-color: grey;
+}
+
+.node-content {
+  grid-area: nc;
+  background-color: orange;
+}
+
+.knowledge-navigator{
+  grid-area: kn;
+  width: 100%;
+  height: 100%;
+}
+
+.minimap-a {
+  grid-area: mini-a;
+  background-color: firebrick;
+}
+
+.minimap-b {
+  grid-area: mini-b;
+  background-color: lightblue;
+}
