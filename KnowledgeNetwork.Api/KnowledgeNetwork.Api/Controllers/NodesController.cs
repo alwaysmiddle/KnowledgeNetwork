@@ -48,34 +48,59 @@ public class GraphController : ControllerBase
                 ClientVersion = version
             };
 
-            // For now, we'll return the basic structure
-            // TODO: Implement full composite query with layouts
+            // Get nodes from database
             var allNodes = await _databaseService.GetAllGraphNodesAsync();
             var filteredNodes = FilterNodesByRequest(allNodes, request);
+
+            // Get edges (empty for now - will be implemented later)
+            var edges = Array.Empty<GraphEdge>();
+
+            // Get or compute layouts if requested
+            LayoutData? layout2D = null;
+            LayoutData? layout3D = null;
+
+            if (request.IncludeFields.Contains("layout"))
+            {
+                // For now, compute layouts based on context, but we can enhance to compute both
+                if (context == "2d" || context == "2d_flowchart")
+                {
+                    layout2D = await _layoutService.GetOrComputeLayoutAsync("2d_flowchart", filteredNodes.ToArray(), edges);
+                }
+                else if (context == "3d" || context == "3d_spatial")
+                {
+                    layout3D = await _layoutService.GetOrComputeLayoutAsync("3d_spatial", filteredNodes.ToArray(), edges);
+                }
+                else
+                {
+                    // Default: compute both for maximum flexibility
+                    layout2D = await _layoutService.GetOrComputeLayoutAsync("2d_flowchart", filteredNodes.ToArray(), edges);
+                    layout3D = await _layoutService.GetOrComputeLayoutAsync("3d_spatial", filteredNodes.ToArray(), edges);
+                }
+            }
 
             stopwatch.Stop();
 
             var response = new GraphViewResponse
             {
                 Nodes = filteredNodes.ToArray(),
-                Edges = Array.Empty<GraphEdge>(), // TODO: Implement edge retrieval
-                Layout2D = null, // TODO: Implement layout computation
-                Layout3D = null, // TODO: Implement layout computation
+                Edges = edges,
+                Layout2D = layout2D,
+                Layout3D = layout3D,
                 Version = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 Stats = new GraphViewStats
                 {
                     NodesReturned = filteredNodes.Count,
-                    EdgesReturned = 0,
+                    EdgesReturned = edges.Length,
                     TotalNodesInGraph = allNodes.Count,
-                    TotalEdgesInGraph = 0,
+                    TotalEdgesInGraph = 0, // TODO: Implement edge counting
                     QueryTime = stopwatch.Elapsed,
-                    LayoutFromCache = false,
+                    LayoutFromCache = layout2D?.ComputedAt < DateTime.UtcNow.AddMinutes(-1) || layout3D?.ComputedAt < DateTime.UtcNow.AddMinutes(-1),
                     AppliedFilters = request.NodeIds?.Length > 0 ? new[] { "node_ids" } : Array.Empty<string>()
                 }
             };
 
-            _logger.LogInformation("Graph view completed in {ElapsedMs}ms, returned {NodeCount} nodes",
-            stopwatch.ElapsedMilliseconds, response.Stats.NodesReturned);
+            _logger.LogInformation("Graph view completed in {ElapsedMs}ms, returned {NodeCount} nodes with layouts: 2D={Has2D}, 3D={Has3D}",
+            stopwatch.ElapsedMilliseconds, response.Stats.NodesReturned, layout2D != null, layout3D != null);
 
             return Ok(response);
         }
@@ -84,10 +109,9 @@ public class GraphController : ControllerBase
             _logger.LogError(ex, "Failed to get graph view");
             return StatusCode(500, new { error = "Failed to retrieve graph view", message = ex.Message });
         }
-    }
-    /// <summary>
-    /// Get all nodes in the graph
-    /// </summary>
+    }    /// <summary>
+         /// Get all nodes in the graph
+         /// </summary>
     [HttpGet("nodes")]
     public async Task<ActionResult<List<GraphNodeResponse>>> GetNodes()
     {
