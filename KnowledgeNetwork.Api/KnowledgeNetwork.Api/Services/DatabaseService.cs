@@ -134,7 +134,7 @@ CREATE SEQUENCE IF NOT EXISTS graph_version_seq START 1;
         await connection.OpenAsync();
 
         const string sql = @"
-SELECT id, label, content, position_x, position_y, types, properties, created_at, updated_at 
+SELECT id, label, content, position_x, position_y, types, properties, created_at, updated_at, version 
 FROM graph_nodes 
 ORDER BY created_at DESC";
 
@@ -163,13 +163,13 @@ ORDER BY created_at DESC";
                 Types = types,
                 Properties = properties,
                 CreatedAt = reader.GetDateTime(7), // created_at
-                UpdatedAt = reader.GetDateTime(8)  // updated_at
+                UpdatedAt = reader.GetDateTime(8), // updated_at
+                Version = reader.GetInt64(9) // version
             });
         }
 
         return nodes;
     }
-
     public async Task<GraphNode?> GetGraphNodeByIdAsync(string id)
     {
         await using var connection = new NpgsqlConnection(_connectionString);
