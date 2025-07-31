@@ -176,7 +176,7 @@ ORDER BY created_at DESC";
         await connection.OpenAsync();
 
         const string sql = @"
-SELECT id, label, content, position_x, position_y, types, properties, created_at, updated_at 
+SELECT id, label, content, position_x, position_y, types, properties, created_at, updated_at, version 
 FROM graph_nodes 
 WHERE id = @id";
 
@@ -209,10 +209,10 @@ WHERE id = @id";
             Types = types,
             Properties = properties,
             CreatedAt = reader.GetDateTime(7),
-            UpdatedAt = reader.GetDateTime(8)
+            UpdatedAt = reader.GetDateTime(8),
+            Version = reader.GetInt64(9)
         };
     }
-
     public async Task<GraphNode> CreateGraphNodeAsync(CreateGraphNodeRequest request)
     {
         await using var connection = new NpgsqlConnection(_connectionString);
