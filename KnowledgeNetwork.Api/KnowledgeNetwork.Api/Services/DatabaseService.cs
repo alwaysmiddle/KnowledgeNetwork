@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Npgsql;
 using KnowledgeNetwork.Api.Models;
 
