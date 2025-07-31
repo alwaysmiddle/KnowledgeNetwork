@@ -7,8 +7,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register our database service
+// Register our services
 builder.Services.AddSingleton<DatabaseService>();
+builder.Services.AddSingleton<LayoutComputationService>();
 
 // Add CORS for React development server
 builder.Services.AddCors(options =>
@@ -16,8 +17,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp", policy =>
     {
         policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:1420")
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+    .AllowAnyMethod()
+    .AllowAnyHeader();
     });
 });
 
