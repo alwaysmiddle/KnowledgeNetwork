@@ -15,7 +15,6 @@ public class DatabaseService
 
         InitializeDatabase();
     }
-
     private void InitializeDatabase()
     {
         using var connection = new NpgsqlConnection(_connectionString);
@@ -26,8 +25,8 @@ public class DatabaseService
 DROP TABLE IF EXISTS nodes;
 ";
 
-        // Create new GraphNode table with proper schema
-        var createTableSql = @"
+        // Create new GraphNode table with proper schema and versioning
+        var createGraphNodesSql = @"
 CREATE TABLE IF NOT EXISTS graph_nodes (
 id TEXT PRIMARY KEY,
 label TEXT NOT NULL,
@@ -37,21 +36,98 @@ position_y DOUBLE PRECISION NOT NULL DEFAULT 0,
 types JSONB NOT NULL DEFAULT '[]'::jsonb,
 properties JSONB NOT NULL DEFAULT '{}'::jsonb,
 created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+version BIGINT NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_graph_nodes_label ON graph_nodes(label);
 CREATE INDEX IF NOT EXISTS idx_graph_nodes_types ON graph_nodes USING GIN(types);
 CREATE INDEX IF NOT EXISTS idx_graph_nodes_created_at ON graph_nodes(created_at);
+CREATE INDEX IF NOT EXISTS idx_graph_nodes_version ON graph_nodes(version);
 ";
 
+        // Create GraphEdge table for full graph support
+        var createGraphEdgesSql = @"
+CREATE TABLE IF NOT EXISTS graph_edges (
+id TEXT PRIMARY KEY,
+source_node_id TEXT NOT NULL,
+target_node_id TEXT NOT NULL,
+label TEXT,
+types JSONB NOT NULL DEFAULT '[]'::jsonb,
+properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (source_node_id) REFERENCES graph_nodes(id) ON DELETE CASCADE,
+FOREIGN KEY (target_node_id) REFERENCES graph_nodes(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_graph_edges_source ON graph_edges(source_node_id);
+CREATE INDEX IF NOT EXISTS idx_graph_edges_target ON graph_edges(target_node_id);
+CREATE INDEX IF NOT EXISTS idx_graph_edges_types ON graph_edges USING GIN(types);
+";
+
+        // Create precomputed layout storage for ultra-fast responses
+        var createLayoutsSql = @"
+CREATE TABLE IF NOT EXISTS graph_layouts (
+id SERIAL PRIMARY KEY,
+graph_version BIGINT NOT NULL,
+context VARCHAR(50) NOT NULL,
+algorithm VARCHAR(100) NOT NULL,  
+layout_data JSONB NOT NULL,
+computed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+is_current BOOLEAN DEFAULT TRUE,
+node_count INTEGER NOT NULL DEFAULT 0,
+edge_count INTEGER NOT NULL DEFAULT 0,
+computation_time_ms INTEGER NOT NULL DEFAULT 0,
+
+UNIQUE(graph_version, context)
+);
+
+CREATE INDEX IF NOT EXISTS idx_graph_layouts_version_context ON graph_layouts(graph_version, context);
+CREATE INDEX IF NOT EXISTS idx_graph_layouts_current ON graph_layouts(is_current) WHERE is_current = TRUE;
+CREATE INDEX IF NOT EXISTS idx_graph_layouts_computed_at ON graph_layouts(computed_at);
+";
+
+        // Create version tracking for invalidation
+        var createVersionTrackingSql = @"
+CREATE TABLE IF NOT EXISTS graph_version_log (
+id SERIAL PRIMARY KEY,
+version_number BIGINT NOT NULL,
+change_type VARCHAR(50) NOT NULL, -- 'node_created', 'node_updated', 'node_deleted', 'edge_created', 'edge_deleted'
+entity_id TEXT NOT NULL,
+entity_type VARCHAR(20) NOT NULL, -- 'node', 'edge'
+changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+metadata JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_version_log_version ON graph_version_log(version_number);
+CREATE INDEX IF NOT EXISTS idx_version_log_entity ON graph_version_log(entity_id, entity_type);
+CREATE INDEX IF NOT EXISTS idx_version_log_changed_at ON graph_version_log(changed_at);
+";
+
+        // Create sequence for global version tracking
+        var createVersionSequenceSql = @"
+CREATE SEQUENCE IF NOT EXISTS graph_version_seq START 1;
+";
+
+        // Execute all schema creation
         using var dropCommand = new NpgsqlCommand(dropOldTablesSql, connection);
         dropCommand.ExecuteNonQuery();
 
-        using var createCommand = new NpgsqlCommand(createTableSql, connection);
-        createCommand.ExecuteNonQuery();
-    }
+        using var createNodesCommand = new NpgsqlCommand(createGraphNodesSql, connection);
+        createNodesCommand.ExecuteNonQuery();
 
+        using var createEdgesCommand = new NpgsqlCommand(createGraphEdgesSql, connection);
+        createEdgesCommand.ExecuteNonQuery();
+
+        using var createLayoutsCommand = new NpgsqlCommand(createLayoutsSql, connection);
+        createLayoutsCommand.ExecuteNonQuery();
+
+        using var createVersionLogCommand = new NpgsqlCommand(createVersionTrackingSql, connection);
+        createVersionLogCommand.ExecuteNonQuery();
+
+        using var createVersionSeqCommand = new NpgsqlCommand(createVersionSequenceSql, connection);
+        createVersionSeqCommand.ExecuteNonQuery();
+    }
     public async Task<List<GraphNode>> GetAllGraphNodesAsync()
     {
         await using var connection = new NpgsqlConnection(_connectionString);
