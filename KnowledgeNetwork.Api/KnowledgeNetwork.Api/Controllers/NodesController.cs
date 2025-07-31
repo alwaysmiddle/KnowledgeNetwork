@@ -20,7 +20,6 @@ public class GraphController : ControllerBase
         _databaseService = databaseService;
         _logger = logger;
     }
-
     /// <summary>
     /// Ultra-fast composite endpoint - Returns everything needed for visualization in one call
     /// Supports different contexts (2D flowchart, 3D spatial) with selective loading
@@ -76,7 +75,7 @@ public class GraphController : ControllerBase
             };
 
             _logger.LogInformation("Graph view completed in {ElapsedMs}ms, returned {NodeCount} nodes",
-            stopwatch.ElapsedMilliseconds, response.NodesReturned);
+            stopwatch.ElapsedMilliseconds, response.Stats.NodesReturned);
 
             return Ok(response);
         }
@@ -86,7 +85,6 @@ public class GraphController : ControllerBase
             return StatusCode(500, new { error = "Failed to retrieve graph view", message = ex.Message });
         }
     }
-
     /// <summary>
     /// Get all nodes in the graph
     /// </summary>
