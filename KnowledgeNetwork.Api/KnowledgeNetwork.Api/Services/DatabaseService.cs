@@ -297,49 +297,91 @@ VALUES (@version, @changeType, @entityId, @entityType, @changedAt, @metadata::js
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        // First, get the current node
-        var currentNode = await GetGraphNodeByIdAsync(id);
-        if (currentNode == null)
+        using var transaction = await connection.BeginTransactionAsync();
+        try
         {
-            return null;
-        }
+            // First, get the current node
+            var currentNode = await GetGraphNodeByIdAsync(id);
+            if (currentNode == null)
+            {
+                return null;
+            }
 
-        // Update only provided fields
-        var updatedNode = new GraphNode
-        {
-            Id = currentNode.Id,
-            Label = request.Label ?? currentNode.Label,
-            Content = request.Content ?? currentNode.Content,
-            Position = request.Position ?? currentNode.Position,
-            Types = request.Types ?? currentNode.Types,
-            Properties = request.Properties ?? currentNode.Properties,
-            CreatedAt = currentNode.CreatedAt,
-            UpdatedAt = DateTime.UtcNow
-        };
+            // Get next version number for change tracking
+            const string getVersionSql = "SELECT nextval('graph_version_seq')";
+            await using var versionCommand = new NpgsqlCommand(getVersionSql, connection, transaction);
+            var newVersion = (long)(await versionCommand.ExecuteScalarAsync() ?? 0L);
 
-        var typesJson = JsonSerializer.Serialize(updatedNode.Types);
-        var propertiesJson = JsonSerializer.Serialize(updatedNode.Properties);
+            // Update only provided fields
+            var updatedNode = new GraphNode
+            {
+                Id = currentNode.Id,
+                Label = request.Label ?? currentNode.Label,
+                Content = request.Content ?? currentNode.Content,
+                Position = request.Position ?? currentNode.Position,
+                Types = request.Types ?? currentNode.Types,
+                Properties = request.Properties ?? currentNode.Properties,
+                CreatedAt = currentNode.CreatedAt,
+                UpdatedAt = DateTime.UtcNow,
+                Version = newVersion
+            };
 
-        var sql = @"
+            var typesJson = JsonSerializer.Serialize(updatedNode.Types);
+            var propertiesJson = JsonSerializer.Serialize(updatedNode.Properties);
+
+            // Update node with new version
+            var updateSql = @"
 UPDATE graph_nodes 
 SET label = @label, content = @content, position_x = @positionX, position_y = @positionY, 
-types = @types::jsonb, properties = @properties::jsonb, updated_at = @updatedAt
+types = @types::jsonb, properties = @properties::jsonb, updated_at = @updatedAt, version = @version
 WHERE id = @id";
 
-        await using var command = new NpgsqlCommand(sql, connection);
-        command.Parameters.AddWithValue("@id", id);
-        command.Parameters.AddWithValue("@label", updatedNode.Label);
-        command.Parameters.AddWithValue("@content", updatedNode.Content ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@positionX", updatedNode.Position.X);
-        command.Parameters.AddWithValue("@positionY", updatedNode.Position.Y);
-        command.Parameters.AddWithValue("@types", typesJson);
-        command.Parameters.AddWithValue("@properties", propertiesJson);
-        command.Parameters.AddWithValue("@updatedAt", updatedNode.UpdatedAt);
+            await using var updateCommand = new NpgsqlCommand(updateSql, connection, transaction);
+            updateCommand.Parameters.AddWithValue("@id", id);
+            updateCommand.Parameters.AddWithValue("@label", updatedNode.Label);
+            updateCommand.Parameters.AddWithValue("@content", updatedNode.Content ?? (object)DBNull.Value);
+            updateCommand.Parameters.AddWithValue("@positionX", updatedNode.Position.X);
+            updateCommand.Parameters.AddWithValue("@positionY", updatedNode.Position.Y);
+            updateCommand.Parameters.AddWithValue("@types", typesJson);
+            updateCommand.Parameters.AddWithValue("@properties", propertiesJson);
+            updateCommand.Parameters.AddWithValue("@updatedAt", updatedNode.UpdatedAt);
+            updateCommand.Parameters.AddWithValue("@version", newVersion);
 
-        await command.ExecuteNonQueryAsync();
-        return updatedNode;
+            await updateCommand.ExecuteNonQueryAsync();
+
+            // Log the change for layout invalidation
+            const string logSql = @"
+INSERT INTO graph_version_log (version_number, change_type, entity_id, entity_type, changed_at, metadata)
+VALUES (@version, @changeType, @entityId, @entityType, @changedAt, @metadata::jsonb)";
+
+            await using var logCommand = new NpgsqlCommand(logSql, connection, transaction);
+            logCommand.Parameters.AddWithValue("@version", newVersion);
+            logCommand.Parameters.AddWithValue("@changeType", "node_updated");
+            logCommand.Parameters.AddWithValue("@entityId", id);
+            logCommand.Parameters.AddWithValue("@entityType", "node");
+            logCommand.Parameters.AddWithValue("@changedAt", updatedNode.UpdatedAt);
+            logCommand.Parameters.AddWithValue("@metadata", JsonSerializer.Serialize(new
+            {
+                oldLabel = currentNode.Label,
+                newLabel = updatedNode.Label
+            }));
+
+            await logCommand.ExecuteNonQueryAsync();
+
+            // Invalidate existing layouts by marking them as not current
+            const string invalidateSql = "UPDATE graph_layouts SET is_current = FALSE WHERE is_current = TRUE";
+            await using var invalidateCommand = new NpgsqlCommand(invalidateSql, connection, transaction);
+            await invalidateCommand.ExecuteNonQueryAsync();
+
+            await transaction.CommitAsync();
+            return updatedNode;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
-
     public async Task<bool> DeleteGraphNodeAsync(string id)
     {
         await using var connection = new NpgsqlConnection(_connectionString);
