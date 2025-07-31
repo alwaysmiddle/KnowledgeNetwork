@@ -14,16 +14,15 @@ public class GraphController : ControllerBase
 {
     private readonly DatabaseService _databaseService;
     private readonly ILogger<GraphController> _logger;
-
-    public GraphController(DatabaseService databaseService, ILogger<GraphController> logger)
+    public GraphController(DatabaseService databaseService, LayoutComputationService layoutService, ILogger<GraphController> logger)
     {
         _databaseService = databaseService;
+        _layoutService = layoutService;
         _logger = logger;
-    }
-    /// <summary>
-    /// Ultra-fast composite endpoint - Returns everything needed for visualization in one call
-    /// Supports different contexts (2D flowchart, 3D spatial) with selective loading
-    /// </summary>
+    }    /// <summary>
+         /// Ultra-fast composite endpoint - Returns everything needed for visualization in one call
+         /// Supports different contexts (2D flowchart, 3D spatial) with selective loading
+         /// </summary>
     [HttpGet("view")]
     public async Task<ActionResult<GraphViewResponse>> GetGraphView(
     [FromQuery] string context = "2d",
