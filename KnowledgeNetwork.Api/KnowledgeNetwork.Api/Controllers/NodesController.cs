@@ -13,16 +13,20 @@ namespace KnowledgeNetwork.Api.Controllers;
 public class GraphController : ControllerBase
 {
     private readonly DatabaseService _databaseService;
+    private readonly LayoutComputationService _layoutService;
     private readonly ILogger<GraphController> _logger;
+
     public GraphController(DatabaseService databaseService, LayoutComputationService layoutService, ILogger<GraphController> logger)
     {
         _databaseService = databaseService;
         _layoutService = layoutService;
         _logger = logger;
-    }    /// <summary>
-         /// Ultra-fast composite endpoint - Returns everything needed for visualization in one call
-         /// Supports different contexts (2D flowchart, 3D spatial) with selective loading
-         /// </summary>
+    }
+
+    /// <summary>
+    /// Ultra-fast composite endpoint - Returns everything needed for visualization in one call
+    /// Supports different contexts (2D flowchart, 3D spatial) with selective loading
+    /// </summary>
     [HttpGet("view")]
     public async Task<ActionResult<GraphViewResponse>> GetGraphView(
     [FromQuery] string context = "2d",
@@ -108,9 +112,11 @@ public class GraphController : ControllerBase
             _logger.LogError(ex, "Failed to get graph view");
             return StatusCode(500, new { error = "Failed to retrieve graph view", message = ex.Message });
         }
-    }    /// <summary>
-         /// Get all nodes in the graph
-         /// </summary>
+    }
+
+    /// <summary>
+    /// Get all nodes in the graph
+    /// </summary>
     [HttpGet("nodes")]
     public async Task<ActionResult<List<GraphNodeResponse>>> GetNodes()
     {
