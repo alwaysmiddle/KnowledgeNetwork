@@ -218,42 +218,80 @@ WHERE id = @id";
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        var id = Guid.NewGuid().ToString();
-        var now = DateTime.UtcNow;
-        var typesJson = JsonSerializer.Serialize(request.Types);
-        var propertiesJson = JsonSerializer.Serialize(request.Properties);
+        using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            var id = Guid.NewGuid().ToString();
+            var now = DateTime.UtcNow;
+            var typesJson = JsonSerializer.Serialize(request.Types);
+            var propertiesJson = JsonSerializer.Serialize(request.Properties);
 
-        var sql = @"
-INSERT INTO graph_nodes (id, label, content, position_x, position_y, types, properties, created_at, updated_at)
-VALUES (@id, @label, @content, @positionX, @positionY, @types::jsonb, @properties::jsonb, @createdAt, @updatedAt)
+            // Get next version number for change tracking
+            const string getVersionSql = "SELECT nextval('graph_version_seq')";
+            await using var versionCommand = new NpgsqlCommand(getVersionSql, connection, transaction);
+            var version = (long)await versionCommand.ExecuteScalarAsync();
+
+            // Insert the new node with version
+            var insertSql = @"
+INSERT INTO graph_nodes (id, label, content, position_x, position_y, types, properties, created_at, updated_at, version)
+VALUES (@id, @label, @content, @positionX, @positionY, @types::jsonb, @properties::jsonb, @createdAt, @updatedAt, @version)
 RETURNING id;";
 
-        await using var command = new NpgsqlCommand(sql, connection);
-        command.Parameters.AddWithValue("@id", id);
-        command.Parameters.AddWithValue("@label", request.Label);
-        command.Parameters.AddWithValue("@content", request.Content ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("@positionX", request.Position.X);
-        command.Parameters.AddWithValue("@positionY", request.Position.Y);
-        command.Parameters.AddWithValue("@types", typesJson);
-        command.Parameters.AddWithValue("@properties", propertiesJson);
-        command.Parameters.AddWithValue("@createdAt", now);
-        command.Parameters.AddWithValue("@updatedAt", now);
+            await using var insertCommand = new NpgsqlCommand(insertSql, connection, transaction);
+            insertCommand.Parameters.AddWithValue("@id", id);
+            insertCommand.Parameters.AddWithValue("@label", request.Label);
+            insertCommand.Parameters.AddWithValue("@content", request.Content ?? (object)DBNull.Value);
+            insertCommand.Parameters.AddWithValue("@positionX", request.Position.X);
+            insertCommand.Parameters.AddWithValue("@positionY", request.Position.Y);
+            insertCommand.Parameters.AddWithValue("@types", typesJson);
+            insertCommand.Parameters.AddWithValue("@properties", propertiesJson);
+            insertCommand.Parameters.AddWithValue("@createdAt", now);
+            insertCommand.Parameters.AddWithValue("@updatedAt", now);
+            insertCommand.Parameters.AddWithValue("@version", version);
 
-        await command.ExecuteScalarAsync();
+            await insertCommand.ExecuteScalarAsync();
 
-        return new GraphNode
+            // Log the change for layout invalidation
+            const string logSql = @"
+INSERT INTO graph_version_log (version_number, change_type, entity_id, entity_type, changed_at, metadata)
+VALUES (@version, @changeType, @entityId, @entityType, @changedAt, @metadata::jsonb)";
+
+            await using var logCommand = new NpgsqlCommand(logSql, connection, transaction);
+            logCommand.Parameters.AddWithValue("@version", version);
+            logCommand.Parameters.AddWithValue("@changeType", "node_created");
+            logCommand.Parameters.AddWithValue("@entityId", id);
+            logCommand.Parameters.AddWithValue("@entityType", "node");
+            logCommand.Parameters.AddWithValue("@changedAt", now);
+            logCommand.Parameters.AddWithValue("@metadata", JsonSerializer.Serialize(new { label = request.Label }));
+
+            await logCommand.ExecuteNonQueryAsync();
+
+            // Invalidate existing layouts by marking them as not current
+            const string invalidateSql = "UPDATE graph_layouts SET is_current = FALSE WHERE is_current = TRUE";
+            await using var invalidateCommand = new NpgsqlCommand(invalidateSql, connection, transaction);
+            await invalidateCommand.ExecuteNonQueryAsync();
+
+            await transaction.CommitAsync();
+
+            return new GraphNode
+            {
+                Id = id,
+                Label = request.Label,
+                Content = request.Content,
+                Position = request.Position,
+                Types = request.Types,
+                Properties = request.Properties,
+                CreatedAt = now,
+                UpdatedAt = now,
+                Version = version
+            };
+        }
+        catch
         {
-            Id = id,
-            Label = request.Label,
-            Content = request.Content,
-            Position = request.Position,
-            Types = request.Types,
-            Properties = request.Properties,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
-
     public async Task<GraphNode?> UpdateGraphNodeAsync(string id, UpdateGraphNodeRequest request)
     {
         await using var connection = new NpgsqlConnection(_connectionString);
