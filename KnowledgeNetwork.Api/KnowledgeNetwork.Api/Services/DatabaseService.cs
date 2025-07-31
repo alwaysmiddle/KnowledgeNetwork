@@ -387,12 +387,63 @@ VALUES (@version, @changeType, @entityId, @entityType, @changedAt, @metadata::js
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        const string sql = "DELETE FROM graph_nodes WHERE id = @id";
+        using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            // First, get the node to be deleted for logging
+            var nodeToDelete = await GetGraphNodeByIdAsync(id);
+            if (nodeToDelete == null)
+            {
+                return false;
+            }
 
-        await using var command = new NpgsqlCommand(sql, connection);
-        command.Parameters.AddWithValue("@id", id);
+            // Get next version number for change tracking
+            const string getVersionSql = "SELECT nextval('graph_version_seq')";
+            await using var versionCommand = new NpgsqlCommand(getVersionSql, connection, transaction);
+            var version = (long)(await versionCommand.ExecuteScalarAsync() ?? 0L);
 
-        var rowsAffected = await command.ExecuteNonQueryAsync();
-        return rowsAffected > 0;
+            // Delete the node (CASCADE will handle edges)
+            const string deleteSql = "DELETE FROM graph_nodes WHERE id = @id";
+            await using var deleteCommand = new NpgsqlCommand(deleteSql, connection, transaction);
+            deleteCommand.Parameters.AddWithValue("@id", id);
+
+            var rowsAffected = await deleteCommand.ExecuteNonQueryAsync();
+            if (rowsAffected == 0)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            // Log the change for layout invalidation
+            const string logSql = @"
+INSERT INTO graph_version_log (version_number, change_type, entity_id, entity_type, changed_at, metadata)
+VALUES (@version, @changeType, @entityId, @entityType, @changedAt, @metadata::jsonb)";
+
+            await using var logCommand = new NpgsqlCommand(logSql, connection, transaction);
+            logCommand.Parameters.AddWithValue("@version", version);
+            logCommand.Parameters.AddWithValue("@changeType", "node_deleted");
+            logCommand.Parameters.AddWithValue("@entityId", id);
+            logCommand.Parameters.AddWithValue("@entityType", "node");
+            logCommand.Parameters.AddWithValue("@changedAt", DateTime.UtcNow);
+            logCommand.Parameters.AddWithValue("@metadata", JsonSerializer.Serialize(new
+            {
+                deletedLabel = nodeToDelete.Label
+            }));
+
+            await logCommand.ExecuteNonQueryAsync();
+
+            // Invalidate existing layouts by marking them as not current
+            const string invalidateSql = "UPDATE graph_layouts SET is_current = FALSE WHERE is_current = TRUE";
+            await using var invalidateCommand = new NpgsqlCommand(invalidateSql, connection, transaction);
+            await invalidateCommand.ExecuteNonQueryAsync();
+
+            await transaction.CommitAsync();
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }
