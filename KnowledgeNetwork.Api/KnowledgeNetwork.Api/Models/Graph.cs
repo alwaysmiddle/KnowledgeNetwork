@@ -10,8 +10,8 @@ namespace KnowledgeNetwork.Api.Models
         public Dictionary<string, object> Properties { get; set; } = new();
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public long Version { get; set; } = 1;
     }
-
     public class GraphEdge
     {
         public required string Id { get; set; }
