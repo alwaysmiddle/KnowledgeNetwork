@@ -1,0 +1,5 @@
+{
+  "Code": "using System;\n\nnamespace TestApp\n{\n    public class Program\n    {\n        public static void Main(string[] args)\n        {\n            Console.WriteLine(\"Hello, World!\");\n        }\n    }\n}",
+  "FileName": "Program.cs",
+  "IncludeDetails": true
+}
