@@ -17,14 +17,14 @@ public abstract class CodeElement
 public class ClassElement : CodeElement
 {
     public string Namespace { get; set; } = string.Empty;
-    public List<MethodElement> Methods { get; set; } = new();
-    public List<PropertyElement> Properties { get; set; } = new();
-    public List<FieldElement> Fields { get; set; } = new();
+    public List<MethodElement> Methods { get; set; } = [];
+    public List<PropertyElement> Properties { get; set; } = [];
+    public List<FieldElement> Fields { get; set; } = [];
     public bool IsStatic { get; set; }
     public bool IsAbstract { get; set; }
     public bool IsSealed { get; set; }
     public string BaseClass { get; set; } = string.Empty;
-    public List<string> Interfaces { get; set; } = new();
+    public List<string> Interfaces { get; set; } = [];
 }
 
 /// <summary>
@@ -33,7 +33,7 @@ public class ClassElement : CodeElement
 public class MethodElement : CodeElement
 {
     public string ReturnType { get; set; } = string.Empty;
-    public List<ParameterElement> Parameters { get; set; } = new();
+    public List<ParameterElement> Parameters { get; set; } = [];
     public bool IsStatic { get; set; }
     public bool IsVirtual { get; set; }
     public bool IsOverride { get; set; }
