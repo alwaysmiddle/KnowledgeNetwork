@@ -18,7 +18,7 @@ public class CodeAnalysisResponse
     /// <summary>
     /// List of compilation errors or warnings
     /// </summary>
-    public List<string> Diagnostics { get; set; } = new();
+    public List<string> Diagnostics { get; set; } = [];
 
     /// <summary>
     /// Summary statistics of the analyzed code
@@ -89,12 +89,12 @@ public class CodeAnalysisSummary
     /// <summary>
     /// List of all namespaces found
     /// </summary>
-    public List<string> Namespaces { get; set; } = new();
+    public List<string> Namespaces { get; set; } = [];
 
     /// <summary>
     /// List of all using statements
     /// </summary>
-    public List<string> UsingStatements { get; set; } = new();
+    public List<string> UsingStatements { get; set; } = [];
 }
 
 /// <summary>
@@ -105,20 +105,20 @@ public class CodeAnalysisDetails
     /// <summary>
     /// All classes found in the code
     /// </summary>
-    public List<ClassElement> Classes { get; set; } = new();
+    public List<ClassElement> Classes { get; set; } = [];
 
     /// <summary>
     /// All methods found in the code (including those in classes)
     /// </summary>
-    public List<MethodElement> Methods { get; set; } = new();
+    public List<MethodElement> Methods { get; set; } = [];
 
     /// <summary>
     /// All properties found in the code
     /// </summary>
-    public List<PropertyElement> Properties { get; set; } = new();
+    public List<PropertyElement> Properties { get; set; } = [];
 
     /// <summary>
     /// All fields found in the code
     /// </summary>
-    public List<FieldElement> Fields { get; set; } = new();
+    public List<FieldElement> Fields { get; set; } = [];
 }
