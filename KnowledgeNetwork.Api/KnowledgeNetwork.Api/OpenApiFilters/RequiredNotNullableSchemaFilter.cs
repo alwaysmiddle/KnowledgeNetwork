@@ -1,9 +1,9 @@
-using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace KnowledgeNetwork.Api.Filters;
+namespace KnowledgeNetwork.Api.OpenApiFilters;
 
 /// <summary>
 /// Schema filter to mark required properties that are not nullable

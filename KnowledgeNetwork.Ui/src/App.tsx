@@ -2,7 +2,7 @@ import "reactflow/dist/style.css";
 import './App.css'
 
 import AppContextProvider from "./context/AppContextProvider";
-import KnowledgeNavigator from "./features/knowledgeNavigator/KnowledgeNavigator";
+import GraphNavigator from "./features/knowledgeNavigator/GraphNavigator";
 import NodeContent from "./features/nodeContent/NodeContent";
 import DescendantNavigator from "./features/DescendantNavigator";
 import UpperLayerMiniMap from "./features/UpperLayerMiniMap";
@@ -21,8 +21,8 @@ export default function App() {
         <div className="node-content">
           <NodeContent />
         </div>
-        <div className="knowledge-navigator">
-          <KnowledgeNavigator />
+        <div className="graph-navigator">
+          <GraphNavigator />
         </div>
         <div className="minimap-a">
           <UpperLayerMiniMap />

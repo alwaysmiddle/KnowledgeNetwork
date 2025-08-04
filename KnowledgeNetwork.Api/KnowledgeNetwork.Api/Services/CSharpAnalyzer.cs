@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -17,7 +11,7 @@ namespace KnowledgeNetwork.Api.Services
     public class CSharpAnalyzer : ILanguageAnalyzer<CSharpAnalysisResult>
     {
         public string Language => "csharp";
-        public string[] SupportedExtensions => new[] { ".cs" };
+        public string[] SupportedExtensions => [".cs"];
         
         // Roslyn references that are commonly needed
         private static readonly MetadataReference[] DefaultReferences = new[]
@@ -58,7 +52,7 @@ namespace KnowledgeNetwork.Api.Services
             // Create compilation for semantic analysis
             var compilation = CSharpCompilation.Create(
                 Path.GetFileNameWithoutExtension(sourceFile.Name),
-                syntaxTrees: new[] { syntaxTree },
+                syntaxTrees: [syntaxTree],
                 references: DefaultReferences,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
             

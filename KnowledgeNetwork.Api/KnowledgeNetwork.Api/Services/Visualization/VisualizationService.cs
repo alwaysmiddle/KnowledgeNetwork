@@ -1,4 +1,3 @@
-using System;
 using KnowledgeNetwork.Api.Models.Analysis;
 using KnowledgeNetwork.Api.Models.Visualization;
 
@@ -9,16 +8,11 @@ namespace KnowledgeNetwork.Api.Services.Visualization
     /// </summary>
     public class VisualizationService : IVisualizationService
     {
-        private readonly CSharpLayoutEngine _csharpEngine;
+        private readonly CSharpLayoutEngine _csharpEngine = new();
         // Future: Add more language engines here
         // private readonly TypeScriptLayoutEngine _typescriptEngine;
         // private readonly PythonLayoutEngine _pythonEngine;
-        
-        public VisualizationService()
-        {
-            _csharpEngine = new CSharpLayoutEngine();
-        }
-        
+
         /// <summary>
         /// Generates a graph layout from language analysis results using pattern matching
         /// </summary>

@@ -1,5 +1,5 @@
+using KnowledgeNetwork.Api.OpenApiFilters;
 using KnowledgeNetwork.Api.Services;
-using KnowledgeNetwork.Api.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,6 +1,3 @@
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using KnowledgeNetwork.Api.Models.Analysis;
 
 namespace KnowledgeNetwork.Api.Services
