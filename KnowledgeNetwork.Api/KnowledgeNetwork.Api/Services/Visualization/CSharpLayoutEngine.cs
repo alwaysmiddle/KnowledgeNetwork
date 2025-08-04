@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using KnowledgeNetwork.Api.Models.Analysis;
 using KnowledgeNetwork.Api.Models.Visualization;
 
