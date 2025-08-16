@@ -3,7 +3,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.Analysis;
 /// <summary>
 /// Information about a method declaration
 /// </summary>
-public class KnMethodInfo
+public class KnCSharpMethodInfo
 {
     /// <summary>
     /// Name of the method

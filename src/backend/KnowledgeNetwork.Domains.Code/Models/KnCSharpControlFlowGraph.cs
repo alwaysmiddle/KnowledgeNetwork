@@ -6,7 +6,7 @@ namespace KnowledgeNetwork.Domains.Code.Models;
 /// <summary>
 /// Represents a complete control flow graph for a method or code block
 /// </summary>
-public class KnControlFlowGraph
+public class KnCSharpControlFlowGraph
 {
     /// <summary>
     /// Unique identifier for this CFG
@@ -26,32 +26,32 @@ public class KnControlFlowGraph
     /// <summary>
     /// All basic blocks in this control flow graph
     /// </summary>
-    public List<KnBasicBlock> BasicBlocks { get; set; } = new();
+    public List<KnCSharpBasicBlock> BasicBlocks { get; set; } = new();
 
     /// <summary>
     /// Entry block (where execution begins)
     /// </summary>
-    public KnBasicBlock? EntryBlock { get; set; }
+    public KnCSharpBasicBlock? EntryBlock { get; set; }
 
     /// <summary>
     /// Exit block (where execution ends)
     /// </summary>
-    public KnBasicBlock? ExitBlock { get; set; }
+    public KnCSharpBasicBlock? ExitBlock { get; set; }
 
     /// <summary>
     /// Control flow edges between basic blocks
     /// </summary>
-    public List<KnControlFlowEdge> Edges { get; set; } = new();
+    public List<KnCSharpControlFlowEdge> Edges { get; set; } = new();
 
     /// <summary>
     /// Complexity metrics for this CFG
     /// </summary>
-    public KnComplexityMetrics Metrics { get; set; } = new();
+    public KnCSharpComplexityMetrics Metrics { get; set; } = new();
 
     /// <summary>
     /// Source location of the method
     /// </summary>
-    public KnLocationInfo? Location { get; set; }
+    public KnCSharpLocationInfo? Location { get; set; }
 
     /// <summary>
     /// Additional metadata for analysis and visualization
@@ -63,7 +63,7 @@ public class KnControlFlowGraph
     /// </summary>
     /// <param name="id">Block ID</param>
     /// <returns>Basic block or null if not found</returns>
-    public KnBasicBlock? GetBlock(int id)
+    public KnCSharpBasicBlock? GetBlock(int id)
     {
         return BasicBlocks.FirstOrDefault(b => b.Id == id);
     }
@@ -72,7 +72,7 @@ public class KnControlFlowGraph
     /// Get all blocks that are reachable from the entry block
     /// </summary>
     /// <returns>List of reachable blocks</returns>
-    public List<KnBasicBlock> GetReachableBlocks()
+    public List<KnCSharpBasicBlock> GetReachableBlocks()
     {
         return BasicBlocks.Where(b => b.IsReachable).ToList();
     }
@@ -81,11 +81,11 @@ public class KnControlFlowGraph
     /// Get all blocks that contain loops (have back-edges)
     /// </summary>
     /// <returns>List of blocks involved in loops</returns>
-    public List<KnBasicBlock> GetLoopBlocks()
+    public List<KnCSharpBasicBlock> GetLoopBlocks()
     {
         var loopBlocks = new HashSet<int>();
         
-        foreach (var edge in Edges.Where(e => e.Kind == KnEdgeKind.BackEdge))
+        foreach (var edge in Edges.Where(e => e.Kind == KnCSharpEdgeKind.BackEdge))
         {
             loopBlocks.Add(edge.Source);
             loopBlocks.Add(edge.Target);
@@ -128,7 +128,7 @@ public class KnControlFlowGraph
         }
 
         // Check for orphaned blocks (except entry)
-        foreach (var block in BasicBlocks.Where(b => b.Kind != KnBasicBlockKind.Entry))
+        foreach (var block in BasicBlocks.Where(b => b.Kind != KnCSharpBasicBlockKind.Entry))
         {
             if (!Edges.Any(e => e.Target == block.Id))
             {

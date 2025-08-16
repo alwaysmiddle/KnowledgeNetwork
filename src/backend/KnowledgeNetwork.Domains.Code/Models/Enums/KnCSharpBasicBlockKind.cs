@@ -3,7 +3,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.Enums;
 /// <summary>
 /// Types of basic blocks in control flow
 /// </summary>
-public enum KnBasicBlockKind
+public enum KnCSharpBasicBlockKind
 {
     /// <summary>
     /// Entry point of the method

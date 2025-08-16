@@ -1,4 +1,3 @@
-
 using KnowledgeNetwork.Domains.Code.Models.Common;
 using KnowledgeNetwork.Domains.Code.Models.ControlFlow;
 using KnowledgeNetwork.Domains.Code.Models.Enums;
@@ -9,7 +8,7 @@ namespace KnowledgeNetwork.Domains.Code.Models;
 /// Represents a basic block in a control flow graph.
 /// A basic block is a sequence of operations with single entry and exit points.
 /// </summary>
-public class KnBasicBlock
+public class KnCSharpBasicBlock
 {
     /// <summary>
     /// Unique identifier for this basic block
@@ -24,12 +23,12 @@ public class KnBasicBlock
     /// <summary>
     /// Type of basic block (Entry, Exit, Regular, etc.)
     /// </summary>
-    public KnBasicBlockKind Kind { get; set; }
+    public KnCSharpBasicBlockKind Kind { get; set; }
 
     /// <summary>
     /// Operations contained in this basic block
     /// </summary>
-    public List<KnOperationInfo> Operations { get; set; } = new();
+    public List<KnCSharpOperationInfo> Operations { get; set; } = new();
 
     /// <summary>
     /// IDs of basic blocks that can execute before this one
@@ -49,12 +48,12 @@ public class KnBasicBlock
     /// <summary>
     /// Conditional branch information if this block ends with a condition
     /// </summary>
-    public KnBranchInfo? BranchInfo { get; set; }
+    public KnCSharpBranchInfo? BranchInfo { get; set; }
 
     /// <summary>
     /// Source location information for this block
     /// </summary>
-    public KnLocationInfo? Location { get; set; }
+    public KnCSharpLocationInfo? Location { get; set; }
 
     /// <summary>
     /// Additional metadata for visualization

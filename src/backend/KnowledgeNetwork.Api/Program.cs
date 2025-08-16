@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Register our analysis services
-builder.Services.AddScoped<CSharpAnalysisService>();
+builder.Services.AddScoped<KnCSharpAnalysisService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

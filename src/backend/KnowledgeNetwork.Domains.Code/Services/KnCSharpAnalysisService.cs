@@ -10,9 +10,9 @@ namespace KnowledgeNetwork.Domains.Code.Services;
 /// Service for analyzing C# code using Microsoft Roslyn compiler APIs.
 /// Encapsulates all Roslyn-specific logic for syntax tree parsing and semantic analysis.
 /// </summary>
-public class CSharpAnalysisService
+public class KnCSharpAnalysisService
 {
-    private readonly ControlFlowAnalyzer _controlFlowAnalyzer = new();
+    private readonly KnCSharpControlFlowAnalyzer _controlFlowAnalyzer = new();
 
     /// <summary>
     /// Language identifier for this service
@@ -24,7 +24,7 @@ public class CSharpAnalysisService
     /// </summary>
     /// <param name="code">C# source code to analyze</param>
     /// <returns>Analysis result containing extracted information</returns>
-    public async Task<KnCodeAnalysisResult> AnalyzeAsync(string code)
+    public async Task<KnCSharpCodeAnalysisResult> AnalyzeAsync(string code)
     {
         try
         {
@@ -37,7 +37,7 @@ public class CSharpAnalysisService
             
             if (errors.Any())
             {
-                return new KnCodeAnalysisResult
+                return new KnCSharpCodeAnalysisResult
                 {
                     Success = false,
                     Errors = errors.Select(e => e.ToString()).ToList(),
@@ -49,7 +49,7 @@ public class CSharpAnalysisService
             var root = await syntaxTree.GetRootAsync();
             
             // Extract basic information
-            var result = new KnCodeAnalysisResult
+            var result = new KnCSharpCodeAnalysisResult
             {
                 Success = true,
                 LanguageId = LanguageId,
@@ -64,7 +64,7 @@ public class CSharpAnalysisService
         }
         catch (Exception ex)
         {
-            return new KnCodeAnalysisResult
+            return new KnCSharpCodeAnalysisResult
             {
                 Success = false,
                 Errors = new List<string> { $"Analysis failed: {ex.Message}" },
@@ -96,7 +96,7 @@ public class CSharpAnalysisService
     /// </summary>
     /// <param name="code">C# source code to analyze</param>
     /// <returns>List of control flow graphs for all methods</returns>
-    public async Task<List<KnControlFlowGraph>> ExtractControlFlowAsync(string code)
+    public async Task<List<KnCSharpControlFlowGraph>> ExtractControlFlowAsync(string code)
     {
         try
         {
@@ -115,7 +115,7 @@ public class CSharpAnalysisService
         {
             // Log error but return empty list
             System.Diagnostics.Debug.WriteLine($"CFG extraction failed: {ex.Message}");
-            return new List<KnControlFlowGraph>();
+            return new List<KnCSharpControlFlowGraph>();
         }
     }
 
@@ -146,11 +146,11 @@ public class CSharpAnalysisService
     /// <summary>
     /// Extract class declarations from syntax tree
     /// </summary>
-    private List<KnClassInfo> ExtractClasses(SyntaxNode root)
+    private List<KnCSharpClassInfo> ExtractClasses(SyntaxNode root)
     {
         return root.DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
-            .Select(c => new KnClassInfo
+            .Select(c => new KnCSharpClassInfo
             {
                 Name = c.Identifier.ValueText,
                 Namespace = GetNamespace(c),
@@ -163,11 +163,11 @@ public class CSharpAnalysisService
     /// <summary>
     /// Extract method declarations from syntax tree
     /// </summary>
-    private List<KnMethodInfo> ExtractMethods(SyntaxNode root)
+    private List<KnCSharpMethodInfo> ExtractMethods(SyntaxNode root)
     {
         return root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
-            .Select(m => new KnMethodInfo
+            .Select(m => new KnCSharpMethodInfo
             {
                 Name = m.Identifier.ValueText,
                 ReturnType = m.ReturnType.ToString(),
@@ -182,11 +182,11 @@ public class CSharpAnalysisService
     /// <summary>
     /// Extract property declarations from syntax tree
     /// </summary>
-    private List<KnPropertyInfo> ExtractProperties(SyntaxNode root)
+    private List<KnCSharpPropertyInfo> ExtractProperties(SyntaxNode root)
     {
         return root.DescendantNodes()
             .OfType<PropertyDeclarationSyntax>()
-            .Select(p => new KnPropertyInfo
+            .Select(p => new KnCSharpPropertyInfo
             {
                 Name = p.Identifier.ValueText,
                 Type = p.Type.ToString(),
@@ -245,60 +245,3 @@ public class CSharpAnalysisService
 
     #endregion
 }
-
-#region Data Models
-
-/// <summary>
-/// Result of C# code analysis
-/// </summary>
-public class CodeAnalysisResult
-{
-    public bool Success { get; set; }
-    public string LanguageId { get; set; } = string.Empty;
-    public List<string> Errors { get; set; } = new();
-    public SyntaxTree? SyntaxTree { get; set; }
-    public List<ClassInfo> Classes { get; set; } = new();
-    public List<MethodInfo> Methods { get; set; } = new();
-    public List<PropertyInfo> Properties { get; set; } = new();
-    public List<string> UsingStatements { get; set; } = new();
-}
-
-/// <summary>
-/// Information about a class declaration
-/// </summary>
-public class ClassInfo
-{
-    public string Name { get; set; } = string.Empty;
-    public string Namespace { get; set; } = string.Empty;
-    public string Modifiers { get; set; } = string.Empty;
-    public int LineNumber { get; set; }
-}
-
-/// <summary>
-/// Information about a method declaration
-/// </summary>
-public class MethodInfo
-{
-    public string Name { get; set; } = string.Empty;
-    public string ReturnType { get; set; } = string.Empty;
-    public string Modifiers { get; set; } = string.Empty;
-    public List<string> Parameters { get; set; } = new();
-    public int LineNumber { get; set; }
-    public string ClassName { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// Information about a property declaration
-/// </summary>
-public class PropertyInfo
-{
-    public string Name { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty;
-    public string Modifiers { get; set; } = string.Empty;
-    public bool HasGetter { get; set; }
-    public bool HasSetter { get; set; }
-    public int LineNumber { get; set; }
-    public string ClassName { get; set; } = string.Empty;
-}
-
-#endregion

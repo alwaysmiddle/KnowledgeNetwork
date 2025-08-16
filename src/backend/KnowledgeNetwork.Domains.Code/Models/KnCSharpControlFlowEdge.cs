@@ -6,7 +6,7 @@ namespace KnowledgeNetwork.Domains.Code.Models;
 /// <summary>
 /// Represents an edge between two basic blocks in a control flow graph
 /// </summary>
-public class KnControlFlowEdge
+public class KnCSharpControlFlowEdge
 {
     /// <summary>
     /// ID of the source basic block
@@ -21,12 +21,12 @@ public class KnControlFlowEdge
     /// <summary>
     /// Type of control flow edge
     /// </summary>
-    public KnEdgeKind Kind { get; set; }
+    public KnCSharpEdgeKind Kind { get; set; }
 
     /// <summary>
     /// Condition for conditional edges (true/false/exception)
     /// </summary>
-    public KnEdgeCondition? Condition { get; set; }
+    public KnCSharpEdgeCondition? Condition { get; set; }
 
     /// <summary>
     /// Human-readable label for this edge

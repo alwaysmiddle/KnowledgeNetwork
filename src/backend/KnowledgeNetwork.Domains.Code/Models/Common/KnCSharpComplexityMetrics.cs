@@ -3,7 +3,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.Common;
 /// <summary>
 /// Complexity metrics for a control flow graph
 /// </summary>
-public class KnComplexityMetrics
+public class KnCSharpComplexityMetrics
 {
     /// <summary>
     /// Cyclomatic complexity (number of decision points + 1)

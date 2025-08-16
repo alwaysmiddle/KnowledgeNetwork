@@ -3,7 +3,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.Enums;
 /// <summary>
 /// Types of control flow branches
 /// </summary>
-public enum KnBranchType
+public enum KnCSharpBranchType
 {
     /// <summary>
     /// Simple if statement

@@ -3,7 +3,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.Common;
 /// <summary>
 /// Source location information
 /// </summary>
-public class KnLocationInfo
+public class KnCSharpLocationInfo
 {
     /// <summary>
     /// Starting line number (1-based)
