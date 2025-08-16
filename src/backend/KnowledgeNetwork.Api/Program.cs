@@ -1,6 +1,13 @@
+using KnowledgeNetwork.Domains.Code.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddControllers();
+
+// Register our analysis services
+builder.Services.AddScoped<CSharpAnalysisService>();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -15,6 +22,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Map our controllers
+app.MapControllers();
 
 var summaries = new[]
 {
