@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.Operations;
 using KnowledgeNetwork.Domains.Code.Models;
 using KnowledgeNetwork.Domains.Code.Models.Common;
@@ -13,7 +12,7 @@ namespace KnowledgeNetwork.Domains.Code.Services;
 /// <summary>
 /// Service for extracting control flow graphs from C# code using Roslyn
 /// </summary>
-public class ControlFlowAnalyzer
+public class ControlFlowAnalyzer : IControlFlowAnalyzer
 {
     /// <summary>
     /// Extract control flow graph from a method body
@@ -21,7 +20,7 @@ public class ControlFlowAnalyzer
     /// <param name="compilation">Compilation context</param>
     /// <param name="methodDeclaration">Method syntax node</param>
     /// <returns>Control flow graph or null if extraction fails</returns>
-    public async Task<Models.ControlFlowGraph?> ExtractControlFlowAsync(
+    public async Task<KnControlFlowGraph?> ExtractControlFlowAsync(
         Compilation compilation, 
         MethodDeclarationSyntax methodDeclaration)
     {
@@ -61,11 +60,11 @@ public class ControlFlowAnalyzer
     /// <param name="compilation">Compilation context</param>
     /// <param name="syntaxTree">Syntax tree to analyze</param>
     /// <returns>List of control flow graphs</returns>
-    public async Task<List<Models.ControlFlowGraph>> ExtractAllControlFlowsAsync(
+    public async Task<List<KnControlFlowGraph>> ExtractAllControlFlowsAsync(
         Compilation compilation,
         SyntaxTree syntaxTree)
     {
-        var cfgs = new List<Models.ControlFlowGraph>();
+        var cfgs = new List<KnControlFlowGraph>();
         var root = await syntaxTree.GetRootAsync();
         
         // Find all method declarations
@@ -88,12 +87,12 @@ public class ControlFlowAnalyzer
     /// <summary>
     /// Convert Roslyn CFG to our CFG model
     /// </summary>
-    private Models.ControlFlowGraph ConvertFromRoslynCfg(
+    private KnControlFlowGraph ConvertFromRoslynCfg(
         Microsoft.CodeAnalysis.FlowAnalysis.ControlFlowGraph roslynCfg,
         MethodDeclarationSyntax methodSyntax,
         IMethodSymbol methodSymbol)
     {
-        var cfg = new Models.ControlFlowGraph
+        var cfg = new KnControlFlowGraph
         {
             MethodName = methodSymbol.Name,
             TypeName = methodSymbol.ContainingType.ToDisplayString(),
@@ -130,13 +129,13 @@ public class ControlFlowAnalyzer
             if (roslynBlock.ConditionalSuccessor != null)
             {
                 var targetId = blockMap[roslynBlock.ConditionalSuccessor.Destination];
-                cfg.Edges.Add(new ControlFlowEdge
+                cfg.Edges.Add(new KnControlFlowEdge
                 {
                     Source = sourceId,
                     Target = targetId,
-                    Kind = EdgeKind.ConditionalTrue,
+                    Kind = KnEdgeKind.ConditionalTrue,
                     Label = "true",
-                    Condition = new EdgeCondition 
+                    Condition = new KnEdgeCondition 
                     { 
                         BooleanValue = true, 
                         Description = "Condition is true" 
@@ -149,18 +148,18 @@ public class ControlFlowAnalyzer
             {
                 var targetId = blockMap[roslynBlock.FallThroughSuccessor.Destination];
                 var edgeKind = roslynBlock.ConditionalSuccessor != null 
-                    ? EdgeKind.ConditionalFalse 
-                    : EdgeKind.Regular;
+                    ? KnEdgeKind.ConditionalFalse 
+                    : KnEdgeKind.Regular;
                 var label = roslynBlock.ConditionalSuccessor != null ? "false" : "";
                 
-                cfg.Edges.Add(new ControlFlowEdge
+                cfg.Edges.Add(new KnControlFlowEdge
                 {
                     Source = sourceId,
                     Target = targetId,
                     Kind = edgeKind,
                     Label = label,
                     Condition = roslynBlock.ConditionalSuccessor != null 
-                        ? new EdgeCondition 
+                        ? new KnEdgeCondition 
                         { 
                             BooleanValue = false, 
                             Description = "Condition is false" 
@@ -179,9 +178,9 @@ public class ControlFlowAnalyzer
     /// <summary>
     /// Convert a Roslyn basic block to our model
     /// </summary>
-    private Models.BasicBlock ConvertBasicBlock(Microsoft.CodeAnalysis.FlowAnalysis.BasicBlock roslynBlock, int id)
+    private KnBasicBlock ConvertBasicBlock(Microsoft.CodeAnalysis.FlowAnalysis.BasicBlock roslynBlock, int id)
     {
-        var block = new Models.BasicBlock
+        var block = new KnBasicBlock
         {
             Id = id,
             Ordinal = roslynBlock.Ordinal,
@@ -208,23 +207,23 @@ public class ControlFlowAnalyzer
     /// <summary>
     /// Convert Roslyn basic block kind to our enum
     /// </summary>
-    private KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind ConvertBlockKind(Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind roslynKind)
+    private KnBasicBlockKind ConvertBlockKind(Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind roslynKind)
     {
         return roslynKind switch
         {
-            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Entry => KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.Entry,
-            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Exit => KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.Exit,
-            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Block => KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.Block,
-            _ => KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.Block
+            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Entry => KnBasicBlockKind.Entry,
+            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Exit => KnBasicBlockKind.Exit,
+            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Block => KnBasicBlockKind.Block,
+            _ => KnBasicBlockKind.Block
         };
     }
 
     /// <summary>
     /// Convert an operation to our operation info model
     /// </summary>
-    private OperationInfo ConvertOperation(IOperation operation)
+    private KnOperationInfo ConvertOperation(IOperation operation)
     {
-        var info = new OperationInfo
+        var info = new KnOperationInfo
         {
             OperationKind = operation.Kind.ToString(),
             Syntax = operation.Syntax?.ToString() ?? "",
@@ -342,14 +341,14 @@ public class ControlFlowAnalyzer
     /// <summary>
     /// Extract branch information from a basic block
     /// </summary>
-    private BranchInfo ExtractBranchInfo(Microsoft.CodeAnalysis.FlowAnalysis.BasicBlock roslynBlock)
+    private KnBranchInfo ExtractBranchInfo(Microsoft.CodeAnalysis.FlowAnalysis.BasicBlock roslynBlock)
     {
-        var branchInfo = new BranchInfo();
+        var branchInfo = new KnBranchInfo();
 
         if (roslynBlock.BranchValue != null)
         {
             branchInfo.Condition = roslynBlock.BranchValue.Syntax?.ToString() ?? "";
-            branchInfo.BranchType = KnowledgeNetwork.Domains.Code.Models.Enums.BranchType.Conditional;
+            branchInfo.BranchType = KnBranchType.Conditional;
         }
 
         return branchInfo;
@@ -358,7 +357,7 @@ public class ControlFlowAnalyzer
     /// <summary>
     /// Get location information from syntax node
     /// </summary>
-    private LocationInfo? GetLocationInfo(SyntaxNode? syntax)
+    private KnLocationInfo? GetLocationInfo(SyntaxNode? syntax)
     {
         if (syntax == null) return null;
 
@@ -366,7 +365,7 @@ public class ControlFlowAnalyzer
         if (!location.IsInSource) return null;
 
         var lineSpan = location.GetLineSpan();
-        return new LocationInfo
+        return new KnLocationInfo
         {
             StartLine = lineSpan.StartLinePosition.Line + 1,
             EndLine = lineSpan.EndLinePosition.Line + 1,
@@ -379,11 +378,11 @@ public class ControlFlowAnalyzer
     /// <summary>
     /// Calculate complexity metrics for the CFG
     /// </summary>
-    private ComplexityMetrics CalculateMetrics(
-        Models.ControlFlowGraph cfg, 
+    private KnComplexityMetrics CalculateMetrics(
+        KnControlFlowGraph cfg, 
         Microsoft.CodeAnalysis.FlowAnalysis.ControlFlowGraph roslynCfg)
     {
-        var metrics = new ComplexityMetrics
+        var metrics = new KnComplexityMetrics
         {
             BlockCount = cfg.BasicBlocks.Count,
             EdgeCount = cfg.Edges.Count
@@ -395,13 +394,13 @@ public class ControlFlowAnalyzer
 
         // Count decision points (conditional branches)
         metrics.DecisionPoints = cfg.Edges.Count(e => 
-            e.Kind == EdgeKind.ConditionalTrue || e.Kind == EdgeKind.ConditionalFalse);
+            e.Kind == KnEdgeKind.ConditionalTrue || e.Kind == KnEdgeKind.ConditionalFalse);
 
         // Count loops (back edges)
-        metrics.LoopCount = cfg.Edges.Count(e => e.Kind == EdgeKind.BackEdge);
+        metrics.LoopCount = cfg.Edges.Count(e => e.Kind == KnEdgeKind.BackEdge);
 
         // Check for exception handling
-        metrics.HasExceptionHandling = cfg.BasicBlocks.Any(b => b.Kind == KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.ExceptionHandler);
+        metrics.HasExceptionHandling = cfg.BasicBlocks.Any(b => b.Kind == KnBasicBlockKind.ExceptionHandler);
 
         return metrics;
     }

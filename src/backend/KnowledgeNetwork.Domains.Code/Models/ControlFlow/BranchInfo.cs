@@ -5,7 +5,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.ControlFlow;
 /// <summary>
 /// Information about conditional branches
 /// </summary>
-public class BranchInfo
+public class KnBranchInfo
 {
     /// <summary>
     /// Condition expression for the branch
@@ -25,5 +25,5 @@ public class BranchInfo
     /// <summary>
     /// Type of branch (if, while, for, switch, etc.)
     /// </summary>
-    public BranchType BranchType { get; set; }
+    public KnBranchType BranchType { get; set; }
 }

@@ -3,7 +3,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.Analysis;
 /// <summary>
 /// Information about a class declaration
 /// </summary>
-public class ClassInfo
+public class KnClassInfo
 {
     /// <summary>
     /// Name of the class

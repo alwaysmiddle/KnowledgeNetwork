@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using KnowledgeNetwork.Domains.Code.Models;
 using KnowledgeNetwork.Domains.Code.Models.Analysis;
 
 namespace KnowledgeNetwork.Domains.Code.Services;
@@ -23,7 +24,7 @@ public class CSharpAnalysisService
     /// </summary>
     /// <param name="code">C# source code to analyze</param>
     /// <returns>Analysis result containing extracted information</returns>
-    public async Task<CodeAnalysisResult> AnalyzeAsync(string code)
+    public async Task<KnCodeAnalysisResult> AnalyzeAsync(string code)
     {
         try
         {
@@ -36,7 +37,7 @@ public class CSharpAnalysisService
             
             if (errors.Any())
             {
-                return new CodeAnalysisResult
+                return new KnCodeAnalysisResult
                 {
                     Success = false,
                     Errors = errors.Select(e => e.ToString()).ToList(),
@@ -48,7 +49,7 @@ public class CSharpAnalysisService
             var root = await syntaxTree.GetRootAsync();
             
             // Extract basic information
-            var result = new CodeAnalysisResult
+            var result = new KnCodeAnalysisResult
             {
                 Success = true,
                 LanguageId = LanguageId,
@@ -63,7 +64,7 @@ public class CSharpAnalysisService
         }
         catch (Exception ex)
         {
-            return new CodeAnalysisResult
+            return new KnCodeAnalysisResult
             {
                 Success = false,
                 Errors = new List<string> { $"Analysis failed: {ex.Message}" },
@@ -95,7 +96,7 @@ public class CSharpAnalysisService
     /// </summary>
     /// <param name="code">C# source code to analyze</param>
     /// <returns>List of control flow graphs for all methods</returns>
-    public async Task<List<Models.ControlFlowGraph>> ExtractControlFlowAsync(string code)
+    public async Task<List<KnControlFlowGraph>> ExtractControlFlowAsync(string code)
     {
         try
         {
@@ -114,7 +115,7 @@ public class CSharpAnalysisService
         {
             // Log error but return empty list
             System.Diagnostics.Debug.WriteLine($"CFG extraction failed: {ex.Message}");
-            return new List<Models.ControlFlowGraph>();
+            return new List<KnControlFlowGraph>();
         }
     }
 
@@ -145,11 +146,11 @@ public class CSharpAnalysisService
     /// <summary>
     /// Extract class declarations from syntax tree
     /// </summary>
-    private List<ClassInfo> ExtractClasses(SyntaxNode root)
+    private List<KnClassInfo> ExtractClasses(SyntaxNode root)
     {
         return root.DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
-            .Select(c => new ClassInfo
+            .Select(c => new KnClassInfo
             {
                 Name = c.Identifier.ValueText,
                 Namespace = GetNamespace(c),
@@ -162,11 +163,11 @@ public class CSharpAnalysisService
     /// <summary>
     /// Extract method declarations from syntax tree
     /// </summary>
-    private List<MethodInfo> ExtractMethods(SyntaxNode root)
+    private List<KnMethodInfo> ExtractMethods(SyntaxNode root)
     {
         return root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
-            .Select(m => new MethodInfo
+            .Select(m => new KnMethodInfo
             {
                 Name = m.Identifier.ValueText,
                 ReturnType = m.ReturnType.ToString(),
@@ -181,11 +182,11 @@ public class CSharpAnalysisService
     /// <summary>
     /// Extract property declarations from syntax tree
     /// </summary>
-    private List<PropertyInfo> ExtractProperties(SyntaxNode root)
+    private List<KnPropertyInfo> ExtractProperties(SyntaxNode root)
     {
         return root.DescendantNodes()
             .OfType<PropertyDeclarationSyntax>()
-            .Select(p => new PropertyInfo
+            .Select(p => new KnPropertyInfo
             {
                 Name = p.Identifier.ValueText,
                 Type = p.Type.ToString(),

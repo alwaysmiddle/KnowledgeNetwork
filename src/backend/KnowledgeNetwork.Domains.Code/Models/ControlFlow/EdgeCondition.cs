@@ -3,7 +3,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.ControlFlow;
 /// <summary>
 /// Condition information for conditional edges
 /// </summary>
-public class EdgeCondition
+public class KnEdgeCondition
 {
     /// <summary>
     /// Boolean result for this edge (true/false for conditionals)

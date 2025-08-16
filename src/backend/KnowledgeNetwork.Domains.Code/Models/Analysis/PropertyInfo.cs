@@ -3,7 +3,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.Analysis;
 /// <summary>
 /// Information about a property declaration
 /// </summary>
-public class PropertyInfo
+public class KnPropertyInfo
 {
     /// <summary>
     /// Name of the property

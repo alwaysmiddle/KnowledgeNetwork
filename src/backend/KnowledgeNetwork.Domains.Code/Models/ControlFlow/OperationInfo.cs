@@ -5,7 +5,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.ControlFlow;
 /// <summary>
 /// Information about an operation within a basic block
 /// </summary>
-public class OperationInfo
+public class KnOperationInfo
 {
     /// <summary>
     /// Type of operation (assignment, method call, etc.)
@@ -25,7 +25,7 @@ public class OperationInfo
     /// <summary>
     /// Source location of this operation
     /// </summary>
-    public LocationInfo? Location { get; set; }
+    public KnLocationInfo? Location { get; set; }
 
     /// <summary>
     /// Whether this operation might throw an exception
