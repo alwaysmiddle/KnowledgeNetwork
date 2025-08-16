@@ -10,9 +10,9 @@ namespace KnowledgeNetwork.Domains.Code.Services;
 /// Service for analyzing C# code using Microsoft Roslyn compiler APIs.
 /// Encapsulates all Roslyn-specific logic for syntax tree parsing and semantic analysis.
 /// </summary>
-public class KnCSharpAnalysisService
+public class CSharpAnalysisService
 {
-    private readonly KnCSharpControlFlowAnalyzer _controlFlowAnalyzer = new();
+    private readonly CSharpControlFlowAnalyzer _controlFlowAnalyzer = new();
 
     /// <summary>
     /// Language identifier for this service
@@ -24,7 +24,7 @@ public class KnCSharpAnalysisService
     /// </summary>
     /// <param name="code">C# source code to analyze</param>
     /// <returns>Analysis result containing extracted information</returns>
-    public async Task<KnCSharpCodeAnalysisResult> AnalyzeAsync(string code)
+    public async Task<CSharpCodeAnalysisResult> AnalyzeAsync(string code)
     {
         try
         {
@@ -37,7 +37,7 @@ public class KnCSharpAnalysisService
             
             if (errors.Any())
             {
-                return new KnCSharpCodeAnalysisResult
+                return new CSharpCodeAnalysisResult
                 {
                     Success = false,
                     Errors = errors.Select(e => e.ToString()).ToList(),
@@ -49,7 +49,7 @@ public class KnCSharpAnalysisService
             var root = await syntaxTree.GetRootAsync();
             
             // Extract basic information
-            var result = new KnCSharpCodeAnalysisResult
+            var result = new CSharpCodeAnalysisResult
             {
                 Success = true,
                 LanguageId = LanguageId,
@@ -64,7 +64,7 @@ public class KnCSharpAnalysisService
         }
         catch (Exception ex)
         {
-            return new KnCSharpCodeAnalysisResult
+            return new CSharpCodeAnalysisResult
             {
                 Success = false,
                 Errors = new List<string> { $"Analysis failed: {ex.Message}" },
@@ -96,7 +96,7 @@ public class KnCSharpAnalysisService
     /// </summary>
     /// <param name="code">C# source code to analyze</param>
     /// <returns>List of control flow graphs for all methods</returns>
-    public async Task<List<KnCSharpControlFlowGraph>> ExtractControlFlowAsync(string code)
+    public async Task<List<CSharpControlFlowGraph>> ExtractControlFlowAsync(string code)
     {
         try
         {
@@ -115,7 +115,7 @@ public class KnCSharpAnalysisService
         {
             // Log error but return empty list
             System.Diagnostics.Debug.WriteLine($"CFG extraction failed: {ex.Message}");
-            return new List<KnCSharpControlFlowGraph>();
+            return new List<CSharpControlFlowGraph>();
         }
     }
 
@@ -146,11 +146,11 @@ public class KnCSharpAnalysisService
     /// <summary>
     /// Extract class declarations from syntax tree
     /// </summary>
-    private List<KnCSharpClassInfo> ExtractClasses(SyntaxNode root)
+    private List<CSharpClassInfo> ExtractClasses(SyntaxNode root)
     {
         return root.DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
-            .Select(c => new KnCSharpClassInfo
+            .Select(c => new CSharpClassInfo
             {
                 Name = c.Identifier.ValueText,
                 Namespace = GetNamespace(c),
@@ -163,11 +163,11 @@ public class KnCSharpAnalysisService
     /// <summary>
     /// Extract method declarations from syntax tree
     /// </summary>
-    private List<KnCSharpMethodInfo> ExtractMethods(SyntaxNode root)
+    private List<CSharpMethodInfo> ExtractMethods(SyntaxNode root)
     {
         return root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
-            .Select(m => new KnCSharpMethodInfo
+            .Select(m => new CSharpMethodInfo
             {
                 Name = m.Identifier.ValueText,
                 ReturnType = m.ReturnType.ToString(),
@@ -182,11 +182,11 @@ public class KnCSharpAnalysisService
     /// <summary>
     /// Extract property declarations from syntax tree
     /// </summary>
-    private List<KnCSharpPropertyInfo> ExtractProperties(SyntaxNode root)
+    private List<CSharpPropertyInfo> ExtractProperties(SyntaxNode root)
     {
         return root.DescendantNodes()
             .OfType<PropertyDeclarationSyntax>()
-            .Select(p => new KnCSharpPropertyInfo
+            .Select(p => new CSharpPropertyInfo
             {
                 Name = p.Identifier.ValueText,
                 Type = p.Type.ToString(),

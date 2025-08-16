@@ -3,7 +3,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.Enums;
 /// <summary>
 /// Types of control flow edges
 /// </summary>
-public enum KnCSharpEdgeKind
+public enum CSharpEdgeKind
 {
     /// <summary>
     /// Normal sequential flow

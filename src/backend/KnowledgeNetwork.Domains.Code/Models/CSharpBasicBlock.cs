@@ -8,7 +8,7 @@ namespace KnowledgeNetwork.Domains.Code.Models;
 /// Represents a basic block in a control flow graph.
 /// A basic block is a sequence of operations with single entry and exit points.
 /// </summary>
-public class KnCSharpBasicBlock
+public class CSharpBasicBlock
 {
     /// <summary>
     /// Unique identifier for this basic block
@@ -23,12 +23,12 @@ public class KnCSharpBasicBlock
     /// <summary>
     /// Type of basic block (Entry, Exit, Regular, etc.)
     /// </summary>
-    public KnCSharpBasicBlockKind Kind { get; set; }
+    public CSharpBasicBlockKind Kind { get; set; }
 
     /// <summary>
     /// Operations contained in this basic block
     /// </summary>
-    public List<KnCSharpOperationInfo> Operations { get; set; } = new();
+    public List<CSharpOperationInfo> Operations { get; set; } = new();
 
     /// <summary>
     /// IDs of basic blocks that can execute before this one
@@ -48,12 +48,12 @@ public class KnCSharpBasicBlock
     /// <summary>
     /// Conditional branch information if this block ends with a condition
     /// </summary>
-    public KnCSharpBranchInfo? BranchInfo { get; set; }
+    public CSharpBranchInfo? BranchInfo { get; set; }
 
     /// <summary>
     /// Source location information for this block
     /// </summary>
-    public KnCSharpLocationInfo? Location { get; set; }
+    public CSharpLocationInfo? Location { get; set; }
 
     /// <summary>
     /// Additional metadata for visualization

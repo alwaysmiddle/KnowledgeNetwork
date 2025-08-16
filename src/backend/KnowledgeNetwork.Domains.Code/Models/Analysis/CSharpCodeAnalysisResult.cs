@@ -5,7 +5,7 @@ namespace KnowledgeNetwork.Domains.Code.Models.Analysis;
 /// <summary>
 /// Result of C# code analysis
 /// </summary>
-public class KnCSharpCodeAnalysisResult
+public class CSharpCodeAnalysisResult
 {
     /// <summary>
     /// Whether the analysis was successful
@@ -30,17 +30,17 @@ public class KnCSharpCodeAnalysisResult
     /// <summary>
     /// Extracted class information
     /// </summary>
-    public List<KnCSharpClassInfo> Classes { get; set; } = new();
+    public List<CSharpClassInfo> Classes { get; set; } = new();
 
     /// <summary>
     /// Extracted method information
     /// </summary>
-    public List<KnCSharpMethodInfo> Methods { get; set; } = new();
+    public List<CSharpMethodInfo> Methods { get; set; } = new();
 
     /// <summary>
     /// Extracted property information
     /// </summary>
-    public List<KnCSharpPropertyInfo> Properties { get; set; } = new();
+    public List<CSharpPropertyInfo> Properties { get; set; } = new();
 
     /// <summary>
     /// Using statements found in the code

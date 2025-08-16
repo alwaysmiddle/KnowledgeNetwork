@@ -1,19 +1,19 @@
 namespace KnowledgeNetwork.Domains.Code.Models.Analysis;
 
 /// <summary>
-/// Information about a method declaration
+/// Information about a property declaration
 /// </summary>
-public class KnCSharpMethodInfo
+public class CSharpPropertyInfo
 {
     /// <summary>
-    /// Name of the method
+    /// Name of the property
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Return type of the method
+    /// Data type of the property
     /// </summary>
-    public string ReturnType { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// Access modifiers and other modifiers
@@ -21,17 +21,22 @@ public class KnCSharpMethodInfo
     public string Modifiers { get; set; } = string.Empty;
 
     /// <summary>
-    /// Method parameters with their types
+    /// Whether the property has a getter
     /// </summary>
-    public List<string> Parameters { get; set; } = new();
+    public bool HasGetter { get; set; }
 
     /// <summary>
-    /// Line number where the method is declared
+    /// Whether the property has a setter
+    /// </summary>
+    public bool HasSetter { get; set; }
+
+    /// <summary>
+    /// Line number where the property is declared
     /// </summary>
     public int LineNumber { get; set; }
 
     /// <summary>
-    /// Name of the class containing this method
+    /// Name of the class containing this property
     /// </summary>
     public string ClassName { get; set; } = string.Empty;
 }

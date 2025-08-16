@@ -15,7 +15,7 @@ namespace KnowledgeNetwork.Api.Controllers;
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class CodeAnalysisController(
-    KnCSharpAnalysisService knCSharpAnalysisService,
+    CSharpAnalysisService cSharpAnalysisService,
     ILogger<CodeAnalysisController> logger)
     : ControllerBase
 {
@@ -44,7 +44,7 @@ public class CodeAnalysisController(
             }
 
             // Perform the analysis
-            var analysisResult = await knCSharpAnalysisService.AnalyzeAsync(request.Code);
+            var analysisResult = await cSharpAnalysisService.AnalyzeAsync(request.Code);
             stopwatch.Stop();
 
             // Convert to API response format
@@ -111,7 +111,7 @@ public class CodeAnalysisController(
     {
         try
         {
-            var isHealthy = await knCSharpAnalysisService.IsHealthyAsync();
+            var isHealthy = await cSharpAnalysisService.IsHealthyAsync();
             
             if (isHealthy)
             {
