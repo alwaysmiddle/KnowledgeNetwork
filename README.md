@@ -26,7 +26,7 @@ Knowledge Network provides intelligent code analysis and interactive graph visua
 ```bash
 cd src/
 dotnet build
-dotnet run --project KnowledgeNetwork.Api
+dotnet run --project backend/KnowledgeNetwork.Api
 ```
 
 API will be available at `http://localhost:5000`
@@ -46,10 +46,11 @@ Frontend will be available at `http://localhost:3000`
 ```
 KnowledgeNetwork/
 ├── src/                              # All source code
-│   ├── KnowledgeNetwork.Core/        # Domain abstractions
-│   ├── KnowledgeNetwork.Infrastructure/ # Data access, caching
-│   ├── KnowledgeNetwork.Domains.Code/  # Code analysis domain
-│   ├── KnowledgeNetwork.Api/         # ASP.NET Core API
+│   ├── backend/                      # .NET backend projects
+│   │   ├── KnowledgeNetwork.Core/        # Domain abstractions
+│   │   ├── KnowledgeNetwork.Infrastructure/ # Data access, caching
+│   │   ├── KnowledgeNetwork.Domains.Code/  # Code analysis domain
+│   │   └── KnowledgeNetwork.Api/         # ASP.NET Core API
 │   ├── KnowledgeNetwork.sln          # Solution file
 │   └── frontend/                     # React application
 ├── test-data/                        # Test files and examples
