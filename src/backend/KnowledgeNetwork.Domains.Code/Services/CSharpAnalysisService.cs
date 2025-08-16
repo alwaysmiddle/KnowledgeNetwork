@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using KnowledgeNetwork.Domains.Code.Models;
+using KnowledgeNetwork.Domains.Code.Models.Analysis;
 
 namespace KnowledgeNetwork.Domains.Code.Services;
 
@@ -11,17 +11,12 @@ namespace KnowledgeNetwork.Domains.Code.Services;
 /// </summary>
 public class CSharpAnalysisService
 {
-    private readonly ControlFlowAnalyzer _controlFlowAnalyzer;
+    private readonly ControlFlowAnalyzer _controlFlowAnalyzer = new();
 
     /// <summary>
     /// Language identifier for this service
     /// </summary>
     public string LanguageId => "csharp";
-
-    public CSharpAnalysisService()
-    {
-        _controlFlowAnalyzer = new ControlFlowAnalyzer();
-    }
 
     /// <summary>
     /// Analyze C# code and extract comprehensive information

@@ -4,6 +4,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.Operations;
 using KnowledgeNetwork.Domains.Code.Models;
+using KnowledgeNetwork.Domains.Code.Models.Common;
+using KnowledgeNetwork.Domains.Code.Models.ControlFlow;
+using KnowledgeNetwork.Domains.Code.Models.Enums;
 
 namespace KnowledgeNetwork.Domains.Code.Services;
 
@@ -205,14 +208,14 @@ public class ControlFlowAnalyzer
     /// <summary>
     /// Convert Roslyn basic block kind to our enum
     /// </summary>
-    private Models.BasicBlockKind ConvertBlockKind(Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind roslynKind)
+    private KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind ConvertBlockKind(Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind roslynKind)
     {
         return roslynKind switch
         {
-            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Entry => Models.BasicBlockKind.Entry,
-            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Exit => Models.BasicBlockKind.Exit,
-            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Block => Models.BasicBlockKind.Block,
-            _ => Models.BasicBlockKind.Block
+            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Entry => KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.Entry,
+            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Exit => KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.Exit,
+            Microsoft.CodeAnalysis.FlowAnalysis.BasicBlockKind.Block => KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.Block,
+            _ => KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.Block
         };
     }
 
@@ -346,7 +349,7 @@ public class ControlFlowAnalyzer
         if (roslynBlock.BranchValue != null)
         {
             branchInfo.Condition = roslynBlock.BranchValue.Syntax?.ToString() ?? "";
-            branchInfo.BranchType = Models.BranchType.Conditional;
+            branchInfo.BranchType = KnowledgeNetwork.Domains.Code.Models.Enums.BranchType.Conditional;
         }
 
         return branchInfo;
@@ -398,7 +401,7 @@ public class ControlFlowAnalyzer
         metrics.LoopCount = cfg.Edges.Count(e => e.Kind == EdgeKind.BackEdge);
 
         // Check for exception handling
-        metrics.HasExceptionHandling = cfg.BasicBlocks.Any(b => b.Kind == Models.BasicBlockKind.ExceptionHandler);
+        metrics.HasExceptionHandling = cfg.BasicBlocks.Any(b => b.Kind == KnowledgeNetwork.Domains.Code.Models.Enums.BasicBlockKind.ExceptionHandler);
 
         return metrics;
     }
