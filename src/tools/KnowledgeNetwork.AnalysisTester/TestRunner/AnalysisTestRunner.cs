@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Spectre.Console;
-using KnowledgeNetwork.Core.Models;
+using KnowledgeNetwork.Core.Models.Core;
 using KnowledgeNetwork.Domains.Code.Services;
 using KnowledgeNetwork.AnalysisTester.Formatters;
 using KnowledgeNetwork.AnalysisTester.Models;
@@ -422,16 +422,21 @@ class LoopTest
             return;
         }
 
+        Console.WriteLine($"TestRunner: Starting CFG analysis for file {filePath}");
+        
         AnsiConsole.Status()
             .Start("Analyzing file with CFG unified format...", async ctx =>
             {
                 ctx.Status($"Reading file: {Path.GetFileName(filePath)}");
                 var content = await File.ReadAllTextAsync(filePath);
+                Console.WriteLine($"TestRunner: Read {content.Length} characters from file");
                 
                 ctx.Status("Running CFG analysis...");
                 var stopwatch = Stopwatch.StartNew();
                 
+                Console.WriteLine("TestRunner: Calling AnalyzeControlFlowAsync");
                 var knowledgeNodes = await _csharpAnalysisService.AnalyzeControlFlowAsync(content, includeOperations: true);
+                Console.WriteLine($"TestRunner: Got {knowledgeNodes.Count} knowledge nodes");
                 
                 stopwatch.Stop();
 

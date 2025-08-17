@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace KnowledgeNetwork.Core.Models;
+namespace KnowledgeNetwork.Core.Models.Core;
 
 /// <summary>
 /// Bidirectional relationship between nodes

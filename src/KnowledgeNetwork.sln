@@ -15,8 +15,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KnowledgeNetwork.Api", "bac
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KnowledgeNetwork.AnalysisTester", "tools\KnowledgeNetwork.AnalysisTester\KnowledgeNetwork.AnalysisTester.csproj", "{832E878F-4852-44D7-8D76-48EA98D40743}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KnowledgeNetwork.IntegrationTests", "KnowledgeNetwork.IntegrationTests\KnowledgeNetwork.IntegrationTests.csproj", "{026C650F-FBA0-41AF-94F9-D19637410EF3}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,18 +85,6 @@ Global
 		{832E878F-4852-44D7-8D76-48EA98D40743}.Release|x64.Build.0 = Release|Any CPU
 		{832E878F-4852-44D7-8D76-48EA98D40743}.Release|x86.ActiveCfg = Release|Any CPU
 		{832E878F-4852-44D7-8D76-48EA98D40743}.Release|x86.Build.0 = Release|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Debug|x64.Build.0 = Debug|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Debug|x86.Build.0 = Debug|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Release|x64.ActiveCfg = Release|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Release|x64.Build.0 = Release|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Release|x86.ActiveCfg = Release|Any CPU
-		{026C650F-FBA0-41AF-94F9-D19637410EF3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

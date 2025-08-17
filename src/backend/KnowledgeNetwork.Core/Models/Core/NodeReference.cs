@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace KnowledgeNetwork.Core.Models;
+namespace KnowledgeNetwork.Core.Models.Core;
 
 /// <summary>
 /// Reference to another node within the contains relationship

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace KnowledgeNetwork.Core.Models;
+namespace KnowledgeNetwork.Core.Models.Core;
 
 /// <summary>
 /// Core node that represents everything in the knowledge graph

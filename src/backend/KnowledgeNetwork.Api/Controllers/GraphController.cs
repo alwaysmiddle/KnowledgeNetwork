@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using KnowledgeNetwork.Core.Models;
+using KnowledgeNetwork.Core.Models.Core;
 using KnowledgeNetwork.Core.Models.Constants;
-using KnowledgeNetwork.Core.Models.Requests;
-using KnowledgeNetwork.Core.Models.Responses;
+using KnowledgeNetwork.Core.Models.Requests.Graph;
+using KnowledgeNetwork.Core.Models.Requests.Filters;
+using KnowledgeNetwork.Core.Models.Responses.Graph;
+using KnowledgeNetwork.Core.Models.Responses.Metadata;
 using KnowledgeNetwork.Domains.Code.Services;
 
 namespace KnowledgeNetwork.Api.Controllers;

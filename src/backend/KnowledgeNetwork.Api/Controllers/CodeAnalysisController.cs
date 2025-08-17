@@ -4,8 +4,9 @@ using KnowledgeNetwork.Api.Models.Requests;
 using KnowledgeNetwork.Api.Models.Responses;
 using KnowledgeNetwork.Api.Models.Summaries;
 using KnowledgeNetwork.Api.Models.Metadata;
-using KnowledgeNetwork.Core.Models.Requests;
-using KnowledgeNetwork.Core.Models.Responses;
+using KnowledgeNetwork.Core.Models.Requests.Analysis;
+using KnowledgeNetwork.Core.Models.Responses.Graph;
+using KnowledgeNetwork.Core.Models.Responses.Metadata;
 using KnowledgeNetwork.Domains.Code.Services;
 
 namespace KnowledgeNetwork.Api.Controllers;

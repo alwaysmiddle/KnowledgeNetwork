@@ -1,4 +1,4 @@
-using KnowledgeNetwork.Core.Models;
+using KnowledgeNetwork.Core.Models.Core;
 
 namespace KnowledgeNetwork.Core.Models.Constants;
 

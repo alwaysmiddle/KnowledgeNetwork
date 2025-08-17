@@ -34,14 +34,62 @@ public class CSharpControlFlowAnalyzer
             
             // Get the method symbol
             var methodSymbol = semanticModel.GetDeclaredSymbol(methodDeclaration);
-            if (methodSymbol == null) return null;
+            if (methodSymbol == null) 
+            {
+                Console.WriteLine($"CFG extraction: Failed to get method symbol for {methodDeclaration.Identifier}");
+                return null;
+            }
+            
+            Console.WriteLine($"CFG extraction: Processing method {methodDeclaration.Identifier}");
 
             // Get the method body operation
-            var operation = semanticModel.GetOperation(methodDeclaration.Body ?? (SyntaxNode?)methodDeclaration.ExpressionBody);
-            if (operation is not IMethodBodyOperation methodBodyOperation) return null;
+            var bodyNode = methodDeclaration.Body ?? (SyntaxNode?)methodDeclaration.ExpressionBody;
+            if (bodyNode == null)
+            {
+                Console.WriteLine($"CFG extraction: Method {methodDeclaration.Identifier} has no body");
+                return null;
+            }
+
+            Console.WriteLine($"CFG extraction: Getting operation for method {methodDeclaration.Identifier}");
+            var operation = semanticModel.GetOperation(bodyNode);
+            if (operation == null)
+            {
+                Console.WriteLine($"CFG extraction: Failed to get operation for method {methodDeclaration.Identifier}");
+                return null;
+            }
+            
+            Console.WriteLine($"CFG extraction: Got operation type {operation.GetType().Name} for method {methodDeclaration.Identifier}");
+
+            // ControlFlowGraph.Create requires IBlockOperation specifically
+            IBlockOperation? blockOperation = null;
+            
+            // If it's a block operation, we can use it directly
+            if (operation is IBlockOperation directBlock)
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: Got IBlockOperation for method {methodDeclaration.Identifier}");
+                blockOperation = directBlock;
+            }
+            // If it's a method body operation, get the block from it
+            else if (operation is IMethodBodyOperation methodBodyOperation && methodBodyOperation.BlockBody != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: Got IMethodBodyOperation for method {methodDeclaration.Identifier}, extracting block");
+                blockOperation = methodBodyOperation.BlockBody;
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: Unexpected operation type {operation.GetType().Name} for method {methodDeclaration.Identifier}");
+                return null;
+            }
+
+            if (blockOperation == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: No valid block operation found for method {methodDeclaration.Identifier}");
+                return null;
+            }
 
             // Create the control flow graph using Roslyn
-            var cfg = ControlFlowGraph.Create(methodBodyOperation);
+            var cfg = ControlFlowGraph.Create(blockOperation);
+            System.Diagnostics.Debug.WriteLine($"CFG extraction: Successfully created CFG with {cfg.Blocks.Length} blocks for method {methodDeclaration.Identifier}");
             
             // Convert to our domain model
             return ConvertToDomainModel(cfg, methodDeclaration, methodSymbol);
@@ -68,12 +116,15 @@ public class CSharpControlFlowAnalyzer
 
         try
         {
+            Console.WriteLine("CFG extraction: Starting extraction for syntax tree");
             var root = await syntaxTree.GetRootAsync();
             
             // Find all method declarations
             var methods = root.DescendantNodes()
                 .OfType<MethodDeclarationSyntax>()
                 .Where(m => m.Body != null || m.ExpressionBody != null);
+                
+            Console.WriteLine($"CFG extraction: Found {methods.Count()} methods to analyze");
 
             // Extract CFG for each method
             foreach (var method in methods)
@@ -123,12 +174,53 @@ public class CSharpControlFlowAnalyzer
         {
             var semanticModel = compilation.GetSemanticModel(constructorDeclaration.SyntaxTree);
             var constructorSymbol = semanticModel.GetDeclaredSymbol(constructorDeclaration);
-            if (constructorSymbol == null) return null;
+            if (constructorSymbol == null) 
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: Failed to get constructor symbol");
+                return null;
+            }
 
-            var operation = semanticModel.GetOperation(constructorDeclaration.Body ?? (SyntaxNode?)constructorDeclaration.ExpressionBody);
-            if (operation is not IMethodBodyOperation methodBodyOperation) return null;
+            var bodyNode = constructorDeclaration.Body ?? (SyntaxNode?)constructorDeclaration.ExpressionBody;
+            if (bodyNode == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: Constructor has no body");
+                return null;
+            }
 
-            var cfg = ControlFlowGraph.Create(methodBodyOperation);
+            var operation = semanticModel.GetOperation(bodyNode);
+            if (operation == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: Failed to get operation for constructor");
+                return null;
+            }
+
+            // ControlFlowGraph.Create requires IBlockOperation specifically
+            IBlockOperation? blockOperation = null;
+            
+            if (operation is IBlockOperation directBlock)
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: Got IBlockOperation for constructor");
+                blockOperation = directBlock;
+            }
+            else if (operation is IMethodBodyOperation methodBodyOperation && methodBodyOperation.BlockBody != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: Got IMethodBodyOperation for constructor, extracting block");
+                blockOperation = methodBodyOperation.BlockBody;
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: Unexpected operation type {operation.GetType().Name} for constructor");
+                return null;
+            }
+
+            if (blockOperation == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"CFG extraction: No valid block operation found for constructor");
+                return null;
+            }
+
+            var cfg = ControlFlowGraph.Create(blockOperation);
+            System.Diagnostics.Debug.WriteLine($"CFG extraction: Successfully created CFG with {cfg.Blocks.Length} blocks for constructor");
             
             // Convert to our domain model
             var result = ConvertToDomainModel(cfg, constructorDeclaration, constructorSymbol);

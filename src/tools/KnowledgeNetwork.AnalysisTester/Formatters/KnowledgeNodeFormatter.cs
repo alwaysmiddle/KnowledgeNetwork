@@ -1,6 +1,6 @@
 using Spectre.Console;
 using System.Text.Json;
-using KnowledgeNetwork.Core.Models;
+using KnowledgeNetwork.Core.Models.Core;
 
 namespace KnowledgeNetwork.AnalysisTester.Formatters;
 

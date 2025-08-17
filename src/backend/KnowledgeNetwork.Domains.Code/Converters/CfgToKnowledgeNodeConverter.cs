@@ -1,4 +1,4 @@
-using KnowledgeNetwork.Core.Models;
+using KnowledgeNetwork.Core.Models.Core;
 using KnowledgeNetwork.Core.Models.Constants;
 using KnowledgeNetwork.Domains.Code.Models;
 using KnowledgeNetwork.Domains.Code.Models.Enums;
@@ -152,16 +152,62 @@ public class CfgToKnowledgeNodeConverter
             }
         }
 
-        // Create the method node
-        var methodNode = ConvertCfgToKnowledgeNode(cfg);
-        
-        // Update method node to reference all child nodes
-        methodNode.Contains = blockNodes.Select((node, index) => new NodeReference
+        // Create the method node directly (avoiding duplicate block creation)
+        var methodNode = new KnowledgeNode
         {
-            NodeId = node.Id,
-            Role = GetBlockRole(cfg.BasicBlocks.FirstOrDefault(b => node.Id.EndsWith($"-{b.Id}"))),
-            Order = index
-        }).ToList();
+            Id = methodId,
+            Type = new NodeType
+            {
+                Primary = PrimaryNodeType.Method,
+                Secondary = "csharp-method",
+                Custom = GetMethodCustomType(cfg)
+            },
+            Label = cfg.MethodName,
+            SourceLanguage = "csharp",
+            Contains = blockNodes.Select((node, index) => new NodeReference
+            {
+                NodeId = node.Id,
+                Role = GetBlockRole(cfg.BasicBlocks.FirstOrDefault(b => node.Id.EndsWith($"-{b.Id}"))),
+                Order = index
+            }).ToList(),
+            Properties = new Dictionary<string, object?>
+            {
+                ["typeName"] = cfg.TypeName,
+                ["methodName"] = cfg.MethodName,
+                ["entryBlockId"] = cfg.EntryBlock?.Id,
+                ["exitBlockId"] = cfg.ExitBlock?.Id,
+                ["totalBlocks"] = cfg.BasicBlocks.Count,
+                ["totalEdges"] = cfg.Edges.Count,
+                ["sourceLocation"] = cfg.Location != null ? new
+                {
+                    startLine = cfg.Location.StartLine,
+                    endLine = cfg.Location.EndLine,
+                    startColumn = cfg.Location.StartColumn,
+                    endColumn = cfg.Location.EndColumn,
+                    filePath = cfg.Location.FilePath
+                } : null
+            },
+            Metrics = new NodeMetrics
+            {
+                Complexity = cfg.Metrics.CyclomaticComplexity,
+                NodeCount = cfg.BasicBlocks.Count,
+                EdgeCount = cfg.Edges.Count,
+                CustomMetrics = new Dictionary<string, object?>
+                {
+                    ["decisionPoints"] = cfg.Metrics.DecisionPoints,
+                    ["loopCount"] = cfg.Metrics.LoopCount,
+                    ["unreachableBlocks"] = cfg.BasicBlocks.Count(b => !b.IsReachable)
+                }
+            },
+            Visualization = new VisualizationHints
+            {
+                PreferredLayout = "cfg-timeline",
+                Collapsed = false,
+                Color = GetMethodVisualizationColor(cfg.Metrics.CyclomaticComplexity)
+            },
+            IsView = false,
+            IsPersisted = true
+        };
 
         nodes.Insert(0, methodNode); // Add method node first
         

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using KnowledgeNetwork.Core.Models.Constants;
 
-namespace KnowledgeNetwork.Core.Models;
+namespace KnowledgeNetwork.Core.Models.Core;
 
 /// <summary>
 /// Hierarchical type system supporting universal concepts, language-specific details, and custom classifications
