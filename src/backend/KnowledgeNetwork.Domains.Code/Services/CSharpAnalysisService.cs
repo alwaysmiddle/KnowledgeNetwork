@@ -1,8 +1,10 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using KnowledgeNetwork.Core.Models;
 using KnowledgeNetwork.Domains.Code.Models;
 using KnowledgeNetwork.Domains.Code.Models.Analysis;
+using KnowledgeNetwork.Domains.Code.Converters;
 
 namespace KnowledgeNetwork.Domains.Code.Services;
 
@@ -13,6 +15,7 @@ namespace KnowledgeNetwork.Domains.Code.Services;
 public class CSharpAnalysisService
 {
     private readonly CSharpControlFlowAnalyzer _controlFlowAnalyzer = new();
+    private readonly CfgToKnowledgeNodeConverter _cfgConverter = new();
 
     /// <summary>
     /// Language identifier for this service
@@ -116,6 +119,71 @@ public class CSharpAnalysisService
             // Log error but return empty list
             System.Diagnostics.Debug.WriteLine($"CFG extraction failed: {ex.Message}");
             return new List<CSharpControlFlowGraph>();
+        }
+    }
+
+    /// <summary>
+    /// Extract control flow graph from C# code and convert to unified KnowledgeNode format
+    /// </summary>
+    /// <param name="code">C# source code to analyze</param>
+    /// <param name="includeOperations">Whether to include operation nodes within basic blocks</param>
+    /// <returns>List of KnowledgeNodes representing methods and their control flow</returns>
+    public async Task<List<KnowledgeNode>> AnalyzeControlFlowAsync(string code, bool includeOperations = true)
+    {
+        try
+        {
+            // Parse the source code into a syntax tree
+            var syntaxTree = CSharpSyntaxTree.ParseText(code);
+            
+            // Create compilation for semantic analysis
+            var compilation = CreateCompilation(syntaxTree);
+            
+            // Extract CFGs for all methods
+            var cfgs = await _controlFlowAnalyzer.ExtractAllControlFlowsAsync(compilation, syntaxTree);
+            
+            // Convert each CFG to KnowledgeNodes
+            var allNodes = new List<KnowledgeNode>();
+            
+            foreach (var cfg in cfgs)
+            {
+                var nodes = _cfgConverter.ConvertCfgToAllNodes(cfg, includeOperations);
+                allNodes.AddRange(nodes);
+            }
+            
+            return allNodes;
+        }
+        catch (Exception ex)
+        {
+            // Log error but return empty list
+            System.Diagnostics.Debug.WriteLine($"CFG analysis failed: {ex.Message}");
+            return new List<KnowledgeNode>();
+        }
+    }
+
+    /// <summary>
+    /// Extract a single method's control flow as a KnowledgeNode structure
+    /// </summary>
+    /// <param name="code">C# source code to analyze</param>
+    /// <param name="methodName">Name of the specific method to analyze</param>
+    /// <param name="includeOperations">Whether to include operation nodes within basic blocks</param>
+    /// <returns>KnowledgeNode representing the method or null if not found</returns>
+    public async Task<KnowledgeNode?> AnalyzeMethodControlFlowAsync(string code, string methodName, bool includeOperations = true)
+    {
+        try
+        {
+            var allNodes = await AnalyzeControlFlowAsync(code, includeOperations);
+            
+            // Find the method node
+            var methodNode = allNodes.FirstOrDefault(n => 
+                n.Type.Primary == "method" && 
+                n.Label.Equals(methodName, StringComparison.OrdinalIgnoreCase));
+            
+            return methodNode;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Method CFG analysis failed: {ex.Message}");
+            return null;
         }
     }
 

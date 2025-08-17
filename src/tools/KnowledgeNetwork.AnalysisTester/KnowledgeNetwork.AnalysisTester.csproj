@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\backend\KnowledgeNetwork.Core\KnowledgeNetwork.Core.csproj" />
     <ProjectReference Include="..\..\backend\KnowledgeNetwork.Domains.Code\KnowledgeNetwork.Domains.Code.csproj" />
   </ItemGroup>
 

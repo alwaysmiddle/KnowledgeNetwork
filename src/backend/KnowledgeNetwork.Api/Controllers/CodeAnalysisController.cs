@@ -4,6 +4,8 @@ using KnowledgeNetwork.Api.Models.Requests;
 using KnowledgeNetwork.Api.Models.Responses;
 using KnowledgeNetwork.Api.Models.Summaries;
 using KnowledgeNetwork.Api.Models.Metadata;
+using KnowledgeNetwork.Core.Models.Requests;
+using KnowledgeNetwork.Core.Models.Responses;
 using KnowledgeNetwork.Domains.Code.Services;
 
 namespace KnowledgeNetwork.Api.Controllers;
@@ -101,6 +103,70 @@ public class CodeAnalysisController(
     }
 
     /// <summary>
+    /// Analyze C# source code control flow and return unified KnowledgeNode format
+    /// </summary>
+    /// <param name="request">CFG analysis request containing source code and options</param>
+    /// <returns>Unified graph response with control flow nodes</returns>
+    [HttpPost("analyze-cfg")]
+    [ProducesResponseType(typeof(UnifiedGraphResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<UnifiedGraphResponse>> AnalyzeControlFlow([FromBody] CfgAnalysisRequest request)
+    {
+        try
+        {
+            logger.LogInformation("Starting CFG analysis for {Language}", request.Language ?? "csharp");
+            var stopwatch = Stopwatch.StartNew();
+
+            // For now, we only support C# analysis
+            if (!string.IsNullOrEmpty(request.Language) && 
+                !request.Language.Equals("csharp", StringComparison.OrdinalIgnoreCase) &&
+                !request.Language.Equals("c#", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest($"Language '{request.Language}' is not currently supported for CFG analysis. Only C# is supported.");
+            }
+
+            // Validate request
+            if (string.IsNullOrWhiteSpace(request.Code))
+            {
+                return BadRequest("Code content is required for CFG analysis.");
+            }
+
+            // Perform the CFG analysis
+            var nodes = await cSharpAnalysisService.AnalyzeControlFlowAsync(
+                request.Code, 
+                request.IncludeOperations ?? true);
+            
+            stopwatch.Stop();
+
+            // Create the unified response
+            var response = new UnifiedGraphResponse
+            {
+                Nodes = nodes,
+                Metadata = new GraphMetadata
+                {
+                    TotalNodes = nodes.Count,
+                    Languages = new List<string> { "csharp" },
+                    Timestamp = DateTime.UtcNow.ToString("O"),
+                    ViewCount = 0,
+                    Duration = stopwatch.Elapsed,
+                    Version = "1.0.0"
+                }
+            };
+
+            logger.LogInformation("CFG analysis completed in {Duration}ms. Generated {NodeCount} nodes",
+                stopwatch.ElapsedMilliseconds, nodes.Count);
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred during CFG analysis");
+            return StatusCode(500, "An error occurred during CFG analysis. Please check the logs for details.");
+        }
+    }
+
+    /// <summary>
     /// Health check endpoint for the code analysis service
     /// </summary>
     /// <returns>Health status of the service</returns>
@@ -171,7 +237,9 @@ public class CodeAnalysisController(
                         "method-extraction",
                         "property-extraction",
                         "using-statements",
-                        "error-detection"
+                        "error-detection",
+                        "control-flow-analysis",
+                        "unified-graph-format"
                     }
                 }
             },

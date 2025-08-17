@@ -50,6 +50,11 @@ class Program
             getDefaultValue: () => true,
             description: "Run in interactive mode (default)");
 
+        // CFG option
+        var cfgOption = new Option<bool>(
+            aliases: new[] { "--cfg", "-c" },
+            description: "Analyze control flow graphs with unified node format");
+
         rootCommand.AddOption(fileOption);
         rootCommand.AddOption(directoryOption);
         rootCommand.AddOption(patternOption);
@@ -57,8 +62,9 @@ class Program
         rootCommand.AddOption(outputOption);
         rootCommand.AddOption(benchmarkOption);
         rootCommand.AddOption(interactiveOption);
+        rootCommand.AddOption(cfgOption);
 
-        rootCommand.SetHandler(async (file, directory, pattern, export, output, benchmark, interactive) =>
+        rootCommand.SetHandler(async (file, directory, pattern, export, output, benchmark, interactive, cfg) =>
         {
             var testRunner = new AnalysisTestRunner();
 
@@ -67,11 +73,25 @@ class Program
                 // Command line mode
                 if (file != null)
                 {
-                    await testRunner.RunFileAnalysisAsync(file.FullName, export, output?.FullName);
+                    if (cfg)
+                    {
+                        await testRunner.RunCfgAnalysisAsync(file.FullName, export, output?.FullName);
+                    }
+                    else
+                    {
+                        await testRunner.RunFileAnalysisAsync(file.FullName, export, output?.FullName);
+                    }
                 }
                 else if (directory != null)
                 {
-                    await testRunner.RunDirectoryAnalysisAsync(directory.FullName, pattern, export, output?.FullName);
+                    if (cfg)
+                    {
+                        await testRunner.RunDirectoryCfgAnalysisAsync(directory.FullName, pattern, export, output?.FullName);
+                    }
+                    else
+                    {
+                        await testRunner.RunDirectoryAnalysisAsync(directory.FullName, pattern, export, output?.FullName);
+                    }
                 }
                 else if (benchmark)
                 {
@@ -92,7 +112,7 @@ class Program
                 AnsiConsole.WriteException(ex);
                 Environment.Exit(1);
             }
-        }, fileOption, directoryOption, patternOption, exportOption, outputOption, benchmarkOption, interactiveOption);
+        }, fileOption, directoryOption, patternOption, exportOption, outputOption, benchmarkOption, interactiveOption, cfgOption);
 
         return await rootCommand.InvokeAsync(args);
     }
