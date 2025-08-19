@@ -119,7 +119,7 @@ public class CSharpAnalysisService
         {
             // Log error but return empty list
             System.Diagnostics.Debug.WriteLine($"CFG extraction failed: {ex.Message}");
-            return new List<CSharpControlFlowGraph>();
+            return [];
         }
     }
 
