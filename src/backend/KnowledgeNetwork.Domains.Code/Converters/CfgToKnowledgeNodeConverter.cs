@@ -100,7 +100,111 @@ public class CfgToKnowledgeNodeConverter
 
         return methodNode;
     }
+    /// <summary>
+    /// Convert CFG to both nodes and edges (edge-centric approach)
+    /// </summary>
+    /// <param name="cfg">Control Flow Graph to convert</param>
+    /// <param name="includeOperations">Whether to include operation nodes within basic blocks</param>
+    /// <returns>Result containing both nodes and edges</returns>
+    public CfgConversionResult ConvertCfgToGraph(CSharpControlFlowGraph cfg, bool includeOperations = true)
+    {
+        var result = new CfgConversionResult();
+        var methodId = $"method-{cfg.TypeName}-{cfg.MethodName}";
 
+        // Create all basic block nodes
+        var blockNodes = new List<KnowledgeNode>();
+        foreach (var block in cfg.BasicBlocks)
+        {
+            var blockNode = ConvertBasicBlockToNode(block, methodId, includeOperations);
+            blockNodes.Add(blockNode);
+
+            // Add operation nodes if requested
+            if (includeOperations)
+            {
+                for (int i = 0; i < block.Operations.Count; i++)
+                {
+                    var operationNode = ConvertOperationToNode(block.Operations[i], blockNode.Id, i);
+                    result.Nodes.Add(operationNode);
+                }
+            }
+        }
+
+        result.Nodes.AddRange(blockNodes);
+
+        // Add control flow edges and collect them
+        foreach (var edge in cfg.Edges)
+        {
+            var sourceNode = blockNodes.FirstOrDefault(n => n.Id.EndsWith($"-{edge.Source}"));
+            var targetNode = blockNodes.FirstOrDefault(n => n.Id.EndsWith($"-{edge.Target}"));
+
+            if (sourceNode != null && targetNode != null)
+            {
+                var knowledgeEdge = ConvertEdgeToKnowledgeEdge(edge, sourceNode.Id, targetNode.Id);
+
+                // Add edge IDs to nodes
+                sourceNode.OutgoingEdgeIds.Add(knowledgeEdge.Id);
+                targetNode.IncomingEdgeIds.Add(knowledgeEdge.Id);
+
+                // Collect the edge (this was the missing piece!)
+                result.Edges.Add(knowledgeEdge);
+            }
+        }
+
+        // Create the method node
+        var methodNode = new KnowledgeNode
+        {
+            Id = methodId,
+            Type = new NodeType
+            {
+                Primary = PrimaryNodeType.Method,
+                Secondary = "csharp-method",
+                Custom = GetMethodCustomType(cfg)
+            },
+            Label = cfg.MethodName,
+            SourceLanguage = "csharp",
+            Properties = new Dictionary<string, object?>
+            {
+                ["typeName"] = cfg.TypeName,
+                ["methodName"] = cfg.MethodName,
+                ["entryBlockId"] = cfg.EntryBlock?.Id,
+                ["exitBlockId"] = cfg.ExitBlock?.Id,
+                ["totalBlocks"] = cfg.BasicBlocks.Count,
+                ["totalEdges"] = cfg.Edges.Count,
+                ["sourceLocation"] = cfg.Location != null ? new
+                {
+                    startLine = cfg.Location.StartLine,
+                    endLine = cfg.Location.EndLine,
+                    startColumn = cfg.Location.StartColumn,
+                    endColumn = cfg.Location.EndColumn,
+                    filePath = cfg.Location.FilePath
+                } : null
+            },
+            Metrics = new NodeMetrics
+            {
+                Complexity = cfg.Metrics.CyclomaticComplexity,
+                NodeCount = cfg.BasicBlocks.Count,
+                OutgoingEdgeCount = cfg.Edges.Count,
+                CustomMetrics = new Dictionary<string, object?>
+                {
+                    ["decisionPoints"] = cfg.Metrics.DecisionPoints,
+                    ["loopCount"] = cfg.Metrics.LoopCount,
+                    ["unreachableBlocks"] = cfg.BasicBlocks.Count(b => !b.IsReachable)
+                }
+            },
+            Visualization = new VisualizationHints
+            {
+                PreferredLayout = "cfg-timeline",
+                Collapsed = false,
+                Color = GetMethodVisualizationColor(cfg.Metrics.CyclomaticComplexity)
+            },
+            IsView = false,
+            IsPersisted = true
+        };
+
+        result.Nodes.Insert(0, methodNode); // Add method node first
+
+        return result;
+    }
     /// <summary>
     /// Get all nodes from a CFG (method + all basic blocks + operations)
     /// </summary>
