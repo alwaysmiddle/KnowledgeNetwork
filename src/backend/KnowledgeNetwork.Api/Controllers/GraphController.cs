@@ -16,9 +16,7 @@ namespace KnowledgeNetwork.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class GraphController(
-    CSharpAnalysisService cSharpAnalysisService,
-    ILogger<GraphController> logger)
+public class GraphController(CSharpAnalysisService cSharpAnalysisService, ILogger<GraphController> logger)
     : ControllerBase
 {
     // In-memory storage for nodes (in a real implementation, this would be a database)
