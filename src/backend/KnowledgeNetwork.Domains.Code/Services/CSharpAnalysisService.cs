@@ -135,8 +135,12 @@ public class CSharpAnalysisService
 
         try
         {
-            // Extract CFGs using the real analyzer (no more mock data)
-            var cfgs = await ExtractControlFlowAsync(code);
+            // TEMPORARY: Create a simple mock CFG to test the edge-centric pipeline
+            // This bypasses the problematic CFG analyzer while we debug it
+            Console.WriteLine("MOCK: Creating simple mock CFG for testing");
+
+            var mockCfg = CreateSimpleMockCfg(code);
+            var cfgs = new List<CSharpControlFlowGraph> { mockCfg };
 
             if (cfgs.Count == 0)
             {
@@ -148,7 +152,9 @@ public class CSharpAnalysisService
             // Convert each CFG to nodes and edges using the new converter method
             foreach (var cfg in cfgs)
             {
+                Console.WriteLine($"MOCK: Converting CFG with {cfg.BasicBlocks.Count} blocks to knowledge graph");
                 var graphData = _cfgConverter.ConvertCfgToGraph(cfg, includeOperations);
+                Console.WriteLine($"MOCK: Converted to {graphData.Nodes.Count} nodes and {graphData.Edges.Count} edges");
                 result.Nodes.AddRange(graphData.Nodes);
                 result.Edges.AddRange(graphData.Edges);
             }
@@ -166,23 +172,24 @@ public class CSharpAnalysisService
                 ["includeOperations"] = includeOperations
             };
 
+            Console.WriteLine($"MOCK: Analysis complete - {result.Nodes.Count} nodes, {result.Edges.Count} edges");
             return result;
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"MOCK: CFG analysis failed: {ex.Message}");
             result.Success = false;
             result.Errors.Add($"CFG analysis failed: {ex.Message}");
             result.Duration = DateTime.UtcNow - startTime;
             return result;
         }
-    }
-    /// <summary>
-    /// Extract a single method's control flow as a KnowledgeNode structure
-    /// </summary>
-    /// <param name="code">C# source code to analyze</param>
-    /// <param name="methodName">Name of the specific method to analyze</param>
-    /// <param name="includeOperations">Whether to include operation nodes within basic blocks</param>
-    /// <returns>KnowledgeNode representing the method or null if not found</returns>
+    }    /// <summary>
+         /// Extract a single method's control flow as a KnowledgeNode structure
+         /// </summary>
+         /// <param name="code">C# source code to analyze</param>
+         /// <param name="methodName">Name of the specific method to analyze</param>
+         /// <param name="includeOperations">Whether to include operation nodes within basic blocks</param>
+         /// <returns>KnowledgeNode representing the method or null if not found</returns>
     public async Task<KnowledgeNode?> AnalyzeMethodControlFlowAsync(string code, string methodName,
         bool includeOperations = true)
     {
