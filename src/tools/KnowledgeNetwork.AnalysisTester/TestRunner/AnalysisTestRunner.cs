@@ -42,13 +42,13 @@ public class AnalysisTestRunner
             {
                 ctx.Status($"Reading file: {Path.GetFileName(filePath)}");
                 var content = await File.ReadAllTextAsync(filePath);
-                
+
                 ctx.Status("Running analysis...");
                 var stopwatch = Stopwatch.StartNew();
-                
+
                 var analysisResult = await _csharpAnalysisService.AnalyzeAsync(content);
                 var cfgResults = await _csharpAnalysisService.ExtractControlFlowAsync(content);
-                
+
                 stopwatch.Stop();
 
                 var testResult = new TestResult
@@ -80,7 +80,7 @@ public class AnalysisTestRunner
         }
 
         var files = _fileManager.DiscoverTestFiles(directoryPath, new[] { pattern });
-        
+
         if (!files.Any())
         {
             AnsiConsole.MarkupLine($"[yellow]No files found matching pattern '{pattern}' in {directoryPath}[/]");
@@ -98,15 +98,15 @@ public class AnalysisTestRunner
                 foreach (var file in files)
                 {
                     task.Description = $"Analyzing {Path.GetFileName(file)}";
-                    
+
                     try
                     {
                         var content = await File.ReadAllTextAsync(file);
                         var stopwatch = Stopwatch.StartNew();
-                        
+
                         var analysisResult = await _csharpAnalysisService.AnalyzeAsync(content);
                         var cfgResults = await _csharpAnalysisService.ExtractControlFlowAsync(content);
-                        
+
                         stopwatch.Stop();
 
                         var testResult = new TestResult
@@ -163,10 +163,10 @@ public class AnalysisTestRunner
         {
             var initialMemory = GC.GetTotalMemory(true);
             var stopwatch = Stopwatch.StartNew();
-            
+
             var analysisResult = await _csharpAnalysisService.AnalyzeAsync(code);
             var cfgResults = await _csharpAnalysisService.ExtractControlFlowAsync(code);
-            
+
             stopwatch.Stop();
             var finalMemory = GC.GetTotalMemory(true);
             var memoryUsed = (finalMemory - initialMemory) / 1024;
@@ -225,7 +225,7 @@ public class AnalysisTestRunner
                     AnsiConsole.WriteLine(json);
                 }
                 break;
-            
+
             case "markdown":
                 var markdown = _resultFormatter.FormatAsMarkdown(result);
                 if (outputPath != null)
@@ -238,7 +238,7 @@ public class AnalysisTestRunner
                     AnsiConsole.WriteLine(markdown);
                 }
                 break;
-            
+
             default:
                 _resultFormatter.FormatAsConsoleTable(result);
                 break;
@@ -261,7 +261,7 @@ public class AnalysisTestRunner
                     AnsiConsole.WriteLine(json);
                 }
                 break;
-            
+
             case "markdown":
                 var markdown = _resultFormatter.FormatBatchResultsAsMarkdown(results);
                 if (outputPath != null)
@@ -274,7 +274,7 @@ public class AnalysisTestRunner
                     AnsiConsole.WriteLine(markdown);
                 }
                 break;
-            
+
             default:
                 _resultFormatter.FormatBatchResultsAsConsoleTable(results);
                 break;
@@ -410,7 +410,6 @@ class LoopTest
     }
 }";
     }
-
     /// <summary>
     /// Analyze a single file with CFG unified node format
     /// </summary>
@@ -423,28 +422,27 @@ class LoopTest
         }
 
         Console.WriteLine($"TestRunner: Starting CFG analysis for file {filePath}");
-        
+
         AnsiConsole.Status()
             .Start("Analyzing file with CFG unified format...", async ctx =>
             {
                 ctx.Status($"Reading file: {Path.GetFileName(filePath)}");
                 var content = await File.ReadAllTextAsync(filePath);
                 Console.WriteLine($"TestRunner: Read {content.Length} characters from file");
-                
+
                 ctx.Status("Running CFG analysis...");
                 var stopwatch = Stopwatch.StartNew();
-                
+
                 Console.WriteLine("TestRunner: Calling AnalyzeControlFlowAsync");
-                var knowledgeNodes = await _csharpAnalysisService.AnalyzeControlFlowAsync(content, includeOperations: true);
-                Console.WriteLine($"TestRunner: Got {knowledgeNodes.Count} knowledge nodes");
-                
+                var analysisResult = await _csharpAnalysisService.AnalyzeControlFlowAsync(content, includeOperations: true);
+                Console.WriteLine($"TestRunner: Got {analysisResult.Nodes.Count} knowledge nodes and {analysisResult.Edges.Count} edges");
+
                 stopwatch.Stop();
 
                 ctx.Status("Formatting results...");
-                await DisplayOrExportCfgResults(knowledgeNodes, filePath, stopwatch.Elapsed, exportFormat, outputPath);
+                await DisplayOrExportCfgResults(analysisResult.Nodes, filePath, stopwatch.Elapsed, exportFormat, outputPath);
             });
     }
-
     /// <summary>
     /// Analyze all files in a directory with CFG unified node format
     /// </summary>
@@ -457,7 +455,7 @@ class LoopTest
         }
 
         var files = _fileManager.DiscoverTestFiles(directoryPath, new[] { pattern });
-        
+
         if (!files.Any())
         {
             AnsiConsole.MarkupLine($"[yellow]No files found matching pattern '{pattern}' in {directoryPath}[/]");
@@ -476,26 +474,26 @@ class LoopTest
                 foreach (var file in files)
                 {
                     task.Description = $"Analyzing {Path.GetFileName(file)}";
-                    
+
                     try
                     {
                         var content = await File.ReadAllTextAsync(file);
                         var stopwatch = Stopwatch.StartNew();
-                        
-                        var fileNodes = await _csharpAnalysisService.AnalyzeControlFlowAsync(content, includeOperations: true);
-                        
+
+                        var analysisResult = await _csharpAnalysisService.AnalyzeControlFlowAsync(content, includeOperations: true);
+
                         stopwatch.Stop();
                         totalDuration = totalDuration.Add(stopwatch.Elapsed);
 
                         // Add file context to node IDs to avoid conflicts
                         var fileName = Path.GetFileNameWithoutExtension(file);
-                        foreach (var node in fileNodes)
+                        foreach (var node in analysisResult.Nodes)
                         {
                             node.Properties["sourceFile"] = file;
                             node.Properties["fileName"] = fileName;
                         }
 
-                        allNodes.AddRange(fileNodes);
+                        allNodes.AddRange(analysisResult.Nodes);
                     }
                     catch (Exception ex)
                     {
@@ -508,7 +506,6 @@ class LoopTest
 
         await DisplayOrExportCfgResults(allNodes, directoryPath, totalDuration, exportFormat, outputPath);
     }
-
     private async Task DisplayOrExportCfgResults(List<KnowledgeNode> nodes, string sourcePath, TimeSpan duration, string? exportFormat, string? outputPath)
     {
         switch (exportFormat?.ToLower())
@@ -525,13 +522,13 @@ class LoopTest
                     AnsiConsole.WriteLine(json);
                 }
                 break;
-            
+
             default:
                 // Display in console using KnowledgeNodeFormatter
                 AnsiConsole.MarkupLine($"[cyan]CFG Analysis Results for: {sourcePath}[/]");
                 AnsiConsole.MarkupLine($"[gray]Duration: {duration.TotalMilliseconds:F2}ms[/]");
                 AnsiConsole.WriteLine();
-                
+
                 _knowledgeNodeFormatter.DisplayNodesAsTree(nodes);
                 _knowledgeNodeFormatter.DisplayRelationships(nodes);
                 _knowledgeNodeFormatter.DisplayMetrics(nodes);

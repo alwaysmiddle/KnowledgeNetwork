@@ -39,7 +39,7 @@ public class CodeAnalysisController(
             var stopwatch = Stopwatch.StartNew();
 
             // For now, we only support C# analysis
-            if (!string.IsNullOrEmpty(request.Language) && 
+            if (!string.IsNullOrEmpty(request.Language) &&
                 !request.Language.Equals("csharp", StringComparison.OrdinalIgnoreCase) &&
                 !request.Language.Equals("c#", StringComparison.OrdinalIgnoreCase))
             {
@@ -102,12 +102,11 @@ public class CodeAnalysisController(
             return StatusCode(500, "An error occurred during code analysis. Please check the logs for details.");
         }
     }
-
     /// <summary>
-    /// Analyze C# source code control flow and return unified KnowledgeNode format
+    /// Analyze C# source code control flow and return unified graph with nodes and edges
     /// </summary>
     /// <param name="request">CFG analysis request containing source code and options</param>
-    /// <returns>Unified graph response with control flow nodes</returns>
+    /// <returns>Unified graph response with control flow nodes and edges</returns>
     [HttpPost("analyze-cfg")]
     [ProducesResponseType(typeof(UnifiedGraphResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -120,7 +119,7 @@ public class CodeAnalysisController(
             var stopwatch = Stopwatch.StartNew();
 
             // For now, we only support C# analysis
-            if (!string.IsNullOrEmpty(request.Language) && 
+            if (!string.IsNullOrEmpty(request.Language) &&
                 !request.Language.Equals("csharp", StringComparison.OrdinalIgnoreCase) &&
                 !request.Language.Equals("c#", StringComparison.OrdinalIgnoreCase))
             {
@@ -133,20 +132,35 @@ public class CodeAnalysisController(
                 return BadRequest("Code content is required for CFG analysis.");
             }
 
-            // Perform the CFG analysis
-            var nodes = await cSharpAnalysisService.AnalyzeControlFlowAsync(
-                request.Code, 
+            // Perform the CFG analysis using the new edge-centric service method
+            var analysisResult = await cSharpAnalysisService.AnalyzeControlFlowAsync(
+                request.Code,
                 request.IncludeOperations ?? true);
-            
+
             stopwatch.Stop();
 
-            // Create the unified response
+            // Check if analysis was successful
+            if (!analysisResult.Success)
+            {
+                return BadRequest(new
+                {
+                    message = "CFG analysis failed",
+                    errors = analysisResult.Errors
+                });
+            }
+
+            // Create the unified response with both nodes and edges
             var response = new UnifiedGraphResponse
             {
-                Nodes = nodes,
+                Nodes = analysisResult.Nodes,
+                Edges = analysisResult.Edges,  // Now including edges!
                 Metadata = new GraphMetadata
                 {
-                    TotalNodes = nodes.Count,
+                    TotalNodes = analysisResult.Nodes.Count,
+                    TotalEdges = analysisResult.Edges.Count,  // Add edge count
+                    EdgeTypeCounts = analysisResult.Edges
+                        .GroupBy(e => e.Type)
+                        .ToDictionary(g => g.Key, g => g.Count()),
                     Languages = new List<string> { "csharp" },
                     Timestamp = DateTime.UtcNow.ToString("O"),
                     ViewCount = 0,
@@ -155,8 +169,8 @@ public class CodeAnalysisController(
                 }
             };
 
-            logger.LogInformation("CFG analysis completed in {Duration}ms. Generated {NodeCount} nodes",
-                stopwatch.ElapsedMilliseconds, nodes.Count);
+            logger.LogInformation("CFG analysis completed in {Duration}ms. Generated {NodeCount} nodes and {EdgeCount} edges",
+                stopwatch.ElapsedMilliseconds, analysisResult.Nodes.Count, analysisResult.Edges.Count);
 
             return Ok(response);
         }
@@ -166,7 +180,6 @@ public class CodeAnalysisController(
             return StatusCode(500, "An error occurred during CFG analysis. Please check the logs for details.");
         }
     }
-
     /// <summary>
     /// Health check endpoint for the code analysis service
     /// </summary>
@@ -179,7 +192,7 @@ public class CodeAnalysisController(
         try
         {
             var isHealthy = await cSharpAnalysisService.IsHealthyAsync();
-            
+
             if (isHealthy)
             {
                 return Ok(new

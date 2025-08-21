@@ -122,115 +122,91 @@ public class CSharpAnalysisService
             return [];
         }
     }
-
     /// <summary>
     /// Extract control flow graph from C# code and convert to unified KnowledgeNode format
     /// </summary>
     /// <param name="code">C# source code to analyze</param>
     /// <param name="includeOperations">Whether to include operation nodes within basic blocks</param>
-    /// <returns>List of KnowledgeNodes representing methods and their control flow</returns>
-    public async Task<List<KnowledgeNode>> AnalyzeControlFlowAsync(string code, bool includeOperations = true)
+    /// <returns>CSharpCfgAnalysisResult containing nodes and edges</returns>
+    public async Task<CSharpCfgAnalysisResult> AnalyzeControlFlowAsync(string code, bool includeOperations = true)
     {
+        var result = new CSharpCfgAnalysisResult();
+        var startTime = DateTime.UtcNow;
+
         try
         {
-            // Console.WriteLine("CSharpAnalysisService: Starting control flow analysis");
-            // Console.WriteLine($"CSharpAnalysisService: Code to parse has {code.Length} characters");
+            // Extract CFGs using the real analyzer (now fixed!)
+            var cfgs = await ExtractControlFlowAsync(code);
 
-            // TEMPORARY WORKAROUND: Create mock nodes to test the pipeline
-            // Console.WriteLine("CSharpAnalysisService: Using mock nodes due to Roslyn parsing issue");
-
-            var mockNodes = new List<KnowledgeNode>();
-
-            // Create mock method node
-            var methodNode = new KnowledgeNode
+            if (cfgs.Count == 0)
             {
-                Id = "method-TestClass-SimpleMethod",
-                Type = new NodeType
-                    { Primary = PrimaryNodeType.Method, Secondary = "csharp-method", Custom = "simple-method" },
-                Label = "SimpleMethod",
-                SourceLanguage = "csharp",
-                Properties = new Dictionary<string, object?>
-                {
-                    ["typeName"] = "TestClass", ["methodName"] = "SimpleMethod", ["totalBlocks"] = 3, ["totalEdges"] = 2
-                },
-                Metrics = new NodeMetrics { Complexity = 2, NodeCount = 3, OutgoingEdgeCount = 2 },
-                Visualization = new VisualizationHints
-                    { PreferredLayout = "cfg-timeline", Collapsed = false, Color = "#4CAF50" },
-                // Contains relationships converted to edges (will be handled separately)
-                IsView = false,
-                IsPersisted = true
-            };
-
-            // Create mock basic block nodes
-            for (int i = 0; i < 3; i++)
-            {
-                var blockType = i == 0 ? "entry-block" : i == 2 ? "exit-block" : "regular-block";
-                var blockKind = i == 0 ? "Entry" : i == 2 ? "Exit" : "Block";
-                var blockColor = i == 0 ? "#2196F3" : i == 2 ? "#9C27B0" : "#607D8B";
-                var blockIcon = i == 0 ? "play_arrow" : i == 2 ? "stop" : "crop_square";
-
-                mockNodes.Add(new KnowledgeNode
-                {
-                    Id = $"block-method-TestClass-SimpleMethod-{i}",
-                    Type = new NodeType
-                    {
-                        Primary = PrimaryNodeType.BasicBlock, Secondary = blockType,
-                        Custom = i == 0 ? "entry" : i == 2 ? "exit" : "block"
-                    },
-                    Label = $"Block {i}",
-                    SourceLanguage = "csharp",
-                    Properties = new Dictionary<string, object?>
-                    {
-                        ["ordinal"] = i, ["kind"] = blockKind, ["isReachable"] = true,
-                        ["operationCount"] = i == 1 ? 2 : 1
-                    },
-                    Visualization = new VisualizationHints
-                        { PreferredLayout = "cfg-timeline", Collapsed = false, Color = blockColor, Icon = blockIcon },
-                    IsView = false,
-                    IsPersisted = true
-                });
+                result.Success = false;
+                result.Errors.Add("No control flow graphs could be extracted from the provided code");
+                return result;
             }
 
-            mockNodes.Insert(0, methodNode); // Add method node first
+            // Convert each CFG to nodes and edges using the new converter method
+            foreach (var cfg in cfgs)
+            {
+                var graphData = _cfgConverter.ConvertCfgToGraph(cfg, includeOperations);
+                result.Nodes.AddRange(graphData.Nodes);
+                result.Edges.AddRange(graphData.Edges);
+            }
 
-            // Console.WriteLine($"CSharpAnalysisService: Created {mockNodes.Count} mock nodes");
-            return mockNodes;
+            result.Success = true;
+            result.Duration = DateTime.UtcNow - startTime;
+
+            // Add metadata
+            result.Metadata = new Dictionary<string, object?>
+            {
+                ["totalMethods"] = cfgs.Count,
+                ["totalBlocks"] = cfgs.Sum(cfg => cfg.BasicBlocks.Count),
+                ["totalOperations"] = result.Nodes.Count(n => n.Type.Primary == "operation"),
+                ["analysisTime"] = result.Duration?.TotalMilliseconds,
+                ["includeOperations"] = includeOperations
+            };
+
+            return result;
         }
         catch (Exception ex)
         {
-            // Console.WriteLine($"CFG analysis failed: {ex.Message}");
-            return new List<KnowledgeNode>();
+            result.Success = false;
+            result.Errors.Add($"CFG analysis failed: {ex.Message}");
+            result.Duration = DateTime.UtcNow - startTime;
+            return result;
         }
-    }
-
-    /// <summary>
-    /// Extract a single method's control flow as a KnowledgeNode structure
-    /// </summary>
-    /// <param name="code">C# source code to analyze</param>
-    /// <param name="methodName">Name of the specific method to analyze</param>
-    /// <param name="includeOperations">Whether to include operation nodes within basic blocks</param>
-    /// <returns>KnowledgeNode representing the method or null if not found</returns>
+    }/// <summary>
+     /// Extract a single method's control flow as a KnowledgeNode structure
+     /// </summary>
+     /// <param name="code">C# source code to analyze</param>
+     /// <param name="methodName">Name of the specific method to analyze</param>
+     /// <param name="includeOperations">Whether to include operation nodes within basic blocks</param>
+     /// <returns>KnowledgeNode representing the method or null if not found</returns>
     public async Task<KnowledgeNode?> AnalyzeMethodControlFlowAsync(string code, string methodName,
         bool includeOperations = true)
     {
         try
         {
-            var allNodes = await AnalyzeControlFlowAsync(code, includeOperations);
+            var analysisResult = await AnalyzeControlFlowAsync(code, includeOperations);
+
+            if (!analysisResult.Success)
+            {
+                return null;
+            }
 
             // Find the method node
-            var methodNode = allNodes.FirstOrDefault(n =>
-                n.Type.Primary == "method" &&
+            var methodNode = analysisResult.Nodes.FirstOrDefault(n =>
+                n.Type.Primary == PrimaryNodeType.Method &&
                 n.Label.Equals(methodName, StringComparison.OrdinalIgnoreCase));
 
             return methodNode;
         }
         catch (Exception ex)
         {
-            // System.Diagnostics.Debug.WriteLine($"Method CFG analysis failed: {ex.Message}");
+            // Log error and return null
             return null;
         }
     }
-
     /// <summary>
     /// Check if the service is healthy and can perform analysis
     /// </summary>
@@ -348,6 +324,120 @@ public class CSharpAnalysisService
             MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location)
         ];
     }
+    /// <summary>
+    /// Create a simple mock CFG for testing the edge-centric pipeline
+    /// </summary>
+    /// <param name="code">C# source code (used for basic analysis)</param>
+    /// <returns>Simple mock CFG with basic blocks and edges</returns>
+    private CSharpControlFlowGraph CreateSimpleMockCfg(string code)
+    {
+        var cfg = new CSharpControlFlowGraph
+        {
+            MethodName = "MockMethod",
+            TypeName = "MockClass",
+            Location = new KnowledgeNetwork.Domains.Code.Models.Common.CSharpLocationInfo
+            {
+                StartLine = 1,
+                StartColumn = 1,
+                EndLine = 10,
+                EndColumn = 1
+            }
+        };
 
+        // Create a simple 3-block CFG: Entry -> Conditional -> Exit
+        var entryBlock = new KnowledgeNetwork.Domains.Code.Models.CSharpBasicBlock
+        {
+            Id = 0,
+            Ordinal = 0,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpBasicBlockKind.Entry,
+            IsReachable = true
+        };
+
+        var conditionalBlock = new KnowledgeNetwork.Domains.Code.Models.CSharpBasicBlock
+        {
+            Id = 1,
+            Ordinal = 1,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpBasicBlockKind.Block,
+            IsReachable = true,
+            BranchInfo = new KnowledgeNetwork.Domains.Code.Models.ControlFlow.CSharpBranchInfo
+            {
+                Condition = "x > 0",
+                BranchType = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpBranchType.Conditional
+            }
+        };
+
+        var exitBlock = new KnowledgeNetwork.Domains.Code.Models.CSharpBasicBlock
+        {
+            Id = 2,
+            Ordinal = 2,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpBasicBlockKind.Exit,
+            IsReachable = true
+        };
+
+        // Add some mock operations
+        entryBlock.Operations.Add(new KnowledgeNetwork.Domains.Code.Models.ControlFlow.CSharpOperationInfo
+        {
+            OperationKind = "VariableDeclarator",
+            Syntax = "int x",
+            Summary = "var x"
+        });
+
+        conditionalBlock.Operations.Add(new KnowledgeNetwork.Domains.Code.Models.ControlFlow.CSharpOperationInfo
+        {
+            OperationKind = "BinaryOperator",
+            Syntax = "x > 0",
+            Summary = "x > 0"
+        });
+
+        // Set up relationships
+        entryBlock.Successors.Add(1);
+        conditionalBlock.Predecessors.Add(0);
+        conditionalBlock.Successors.Add(2);
+        exitBlock.Predecessors.Add(1);
+
+        cfg.BasicBlocks.Add(entryBlock);
+        cfg.BasicBlocks.Add(conditionalBlock);
+        cfg.BasicBlocks.Add(exitBlock);
+        cfg.EntryBlock = entryBlock;
+        cfg.ExitBlock = exitBlock;
+
+        // Create edges
+        var edge1 = new KnowledgeNetwork.Domains.Code.Models.CSharpControlFlowEdge
+        {
+            Source = 0,
+            Target = 1,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpEdgeKind.Regular,
+            Label = "entry"
+        };
+
+        var edge2 = new KnowledgeNetwork.Domains.Code.Models.CSharpControlFlowEdge
+        {
+            Source = 1,
+            Target = 2,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpEdgeKind.ConditionalTrue,
+            Label = "condition",
+            Condition = new KnowledgeNetwork.Domains.Code.Models.ControlFlow.CSharpEdgeCondition
+            {
+                BooleanValue = true,
+                Description = "x > 0"
+            }
+        };
+
+        cfg.Edges.Add(edge1);
+        cfg.Edges.Add(edge2);
+
+        // Mock complexity metrics
+        cfg.Metrics = new KnowledgeNetwork.Domains.Code.Models.Common.CSharpComplexityMetrics
+        {
+            BlockCount = 3,
+            EdgeCount = 2,
+            CyclomaticComplexity = 2,
+            DecisionPoints = 1,
+            LoopCount = 0,
+            HasExceptionHandling = false
+        };
+
+        return cfg;
+    }
     #endregion
 }
