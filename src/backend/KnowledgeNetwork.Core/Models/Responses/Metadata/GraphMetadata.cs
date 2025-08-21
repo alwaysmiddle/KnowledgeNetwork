@@ -10,6 +10,12 @@ public class GraphMetadata
     [JsonPropertyName("totalNodes")]
     public int TotalNodes { get; set; }
 
+    [JsonPropertyName("totalEdges")]
+    public int TotalEdges { get; set; }
+
+    [JsonPropertyName("edgeTypeCounts")]
+    public Dictionary<string, int> EdgeTypeCounts { get; set; } = new();
+
     [JsonPropertyName("languages")]
     public List<string> Languages { get; set; } = new();
 

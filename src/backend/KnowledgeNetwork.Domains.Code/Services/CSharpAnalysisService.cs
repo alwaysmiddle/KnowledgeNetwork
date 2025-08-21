@@ -153,15 +153,10 @@ public class CSharpAnalysisService
                 {
                     ["typeName"] = "TestClass", ["methodName"] = "SimpleMethod", ["totalBlocks"] = 3, ["totalEdges"] = 2
                 },
-                Metrics = new NodeMetrics { Complexity = 2, NodeCount = 3, EdgeCount = 2 },
+                Metrics = new NodeMetrics { Complexity = 2, NodeCount = 3, OutgoingEdgeCount = 2 },
                 Visualization = new VisualizationHints
                     { PreferredLayout = "cfg-timeline", Collapsed = false, Color = "#4CAF50" },
-                Contains =
-                [
-                    new() { NodeId = "block-method-TestClass-SimpleMethod-0", Role = "entry", Order = 0 },
-                    new() { NodeId = "block-method-TestClass-SimpleMethod-1", Role = "regular", Order = 1 },
-                    new() { NodeId = "block-method-TestClass-SimpleMethod-2", Role = "exit", Order = 2 }
-                ],
+                // Contains relationships converted to edges (will be handled separately)
                 IsView = false,
                 IsPersisted = true
             };

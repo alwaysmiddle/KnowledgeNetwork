@@ -14,6 +14,6 @@ public class ExpandedNode
     [JsonPropertyName("children")]
     public List<KnowledgeNode> Children { get; set; } = new();
 
-    [JsonPropertyName("relationships")]
-    public List<RelationshipPair>? Relationships { get; set; }
+    [JsonPropertyName("edges")]
+    public List<KnowledgeEdge> Edges { get; set; } = new();
 }

@@ -13,6 +13,6 @@ public class ExpandNodeRequest
     [JsonPropertyName("depth")]
     public int Depth { get; set; } = 1;
 
-    [JsonPropertyName("includeRelationships")]
-    public bool? IncludeRelationships { get; set; }
+    [JsonPropertyName("includeEdges")]
+    public bool? IncludeEdges { get; set; }
 }

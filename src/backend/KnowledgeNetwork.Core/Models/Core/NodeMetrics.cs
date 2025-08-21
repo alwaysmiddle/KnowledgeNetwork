@@ -16,8 +16,11 @@ public class NodeMetrics
     [JsonPropertyName("nodeCount")]
     public int? NodeCount { get; set; }
 
-    [JsonPropertyName("edgeCount")]
-    public int? EdgeCount { get; set; }
+    [JsonPropertyName("incomingEdgeCount")]
+    public int? IncomingEdgeCount { get; set; }
+
+    [JsonPropertyName("outgoingEdgeCount")]
+    public int? OutgoingEdgeCount { get; set; }
 
     [JsonPropertyName("depth")]
     public int? Depth { get; set; }
