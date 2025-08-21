@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Spectre.Console;
+using KnowledgeNetwork.Core.Models.Core;
 using KnowledgeNetwork.Domains.Code.Services;
 using KnowledgeNetwork.AnalysisTester.Formatters;
 using KnowledgeNetwork.AnalysisTester.Models;
@@ -14,12 +15,14 @@ public class AnalysisTestRunner
 {
     private readonly CSharpAnalysisService _csharpAnalysisService;
     private readonly AnalysisResultFormatter _resultFormatter;
+    private readonly KnowledgeNodeFormatter _knowledgeNodeFormatter;
     private readonly TestFileManager _fileManager;
 
     public AnalysisTestRunner()
     {
         _csharpAnalysisService = new CSharpAnalysisService();
         _resultFormatter = new AnalysisResultFormatter();
+        _knowledgeNodeFormatter = new KnowledgeNodeFormatter();
         _fileManager = new TestFileManager();
     }
 
@@ -406,5 +409,133 @@ class LoopTest
         }
     }
 }";
+    }
+
+    /// <summary>
+    /// Analyze a single file with CFG unified node format
+    /// </summary>
+    public async Task RunCfgAnalysisAsync(string filePath, string? exportFormat = null, string? outputPath = null)
+    {
+        if (!File.Exists(filePath))
+        {
+            AnsiConsole.MarkupLine($"[red]File not found: {filePath}[/]");
+            return;
+        }
+
+        Console.WriteLine($"TestRunner: Starting CFG analysis for file {filePath}");
+        
+        AnsiConsole.Status()
+            .Start("Analyzing file with CFG unified format...", async ctx =>
+            {
+                ctx.Status($"Reading file: {Path.GetFileName(filePath)}");
+                var content = await File.ReadAllTextAsync(filePath);
+                Console.WriteLine($"TestRunner: Read {content.Length} characters from file");
+                
+                ctx.Status("Running CFG analysis...");
+                var stopwatch = Stopwatch.StartNew();
+                
+                Console.WriteLine("TestRunner: Calling AnalyzeControlFlowAsync");
+                var knowledgeNodes = await _csharpAnalysisService.AnalyzeControlFlowAsync(content, includeOperations: true);
+                Console.WriteLine($"TestRunner: Got {knowledgeNodes.Count} knowledge nodes");
+                
+                stopwatch.Stop();
+
+                ctx.Status("Formatting results...");
+                await DisplayOrExportCfgResults(knowledgeNodes, filePath, stopwatch.Elapsed, exportFormat, outputPath);
+            });
+    }
+
+    /// <summary>
+    /// Analyze all files in a directory with CFG unified node format
+    /// </summary>
+    public async Task RunDirectoryCfgAnalysisAsync(string directoryPath, string pattern = "*.cs", string? exportFormat = null, string? outputPath = null)
+    {
+        if (!Directory.Exists(directoryPath))
+        {
+            AnsiConsole.MarkupLine($"[red]Directory not found: {directoryPath}[/]");
+            return;
+        }
+
+        var files = _fileManager.DiscoverTestFiles(directoryPath, new[] { pattern });
+        
+        if (!files.Any())
+        {
+            AnsiConsole.MarkupLine($"[yellow]No files found matching pattern '{pattern}' in {directoryPath}[/]");
+            return;
+        }
+
+        var allNodes = new List<KnowledgeNode>();
+        var totalDuration = TimeSpan.Zero;
+
+        await AnsiConsole.Progress()
+            .StartAsync(async ctx =>
+            {
+                var task = ctx.AddTask("[green]Analyzing files with CFG...[/]");
+                task.MaxValue = files.Count;
+
+                foreach (var file in files)
+                {
+                    task.Description = $"Analyzing {Path.GetFileName(file)}";
+                    
+                    try
+                    {
+                        var content = await File.ReadAllTextAsync(file);
+                        var stopwatch = Stopwatch.StartNew();
+                        
+                        var fileNodes = await _csharpAnalysisService.AnalyzeControlFlowAsync(content, includeOperations: true);
+                        
+                        stopwatch.Stop();
+                        totalDuration = totalDuration.Add(stopwatch.Elapsed);
+
+                        // Add file context to node IDs to avoid conflicts
+                        var fileName = Path.GetFileNameWithoutExtension(file);
+                        foreach (var node in fileNodes)
+                        {
+                            node.Properties["sourceFile"] = file;
+                            node.Properties["fileName"] = fileName;
+                        }
+
+                        allNodes.AddRange(fileNodes);
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[red]Error analyzing {Path.GetFileName(file)}: {ex.Message}[/]");
+                    }
+
+                    task.Increment(1);
+                }
+            });
+
+        await DisplayOrExportCfgResults(allNodes, directoryPath, totalDuration, exportFormat, outputPath);
+    }
+
+    private async Task DisplayOrExportCfgResults(List<KnowledgeNode> nodes, string sourcePath, TimeSpan duration, string? exportFormat, string? outputPath)
+    {
+        switch (exportFormat?.ToLower())
+        {
+            case "json":
+                var json = JsonSerializer.Serialize(nodes, new JsonSerializerOptions { WriteIndented = true });
+                if (outputPath != null)
+                {
+                    await File.WriteAllTextAsync(outputPath, json);
+                    AnsiConsole.MarkupLine($"[green]CFG results exported to: {outputPath}[/]");
+                }
+                else
+                {
+                    AnsiConsole.WriteLine(json);
+                }
+                break;
+            
+            default:
+                // Display in console using KnowledgeNodeFormatter
+                AnsiConsole.MarkupLine($"[cyan]CFG Analysis Results for: {sourcePath}[/]");
+                AnsiConsole.MarkupLine($"[gray]Duration: {duration.TotalMilliseconds:F2}ms[/]");
+                AnsiConsole.WriteLine();
+                
+                _knowledgeNodeFormatter.DisplayNodesAsTree(nodes);
+                _knowledgeNodeFormatter.DisplayRelationships(nodes);
+                _knowledgeNodeFormatter.DisplayMetrics(nodes);
+                break;
+        }
     }
 }
