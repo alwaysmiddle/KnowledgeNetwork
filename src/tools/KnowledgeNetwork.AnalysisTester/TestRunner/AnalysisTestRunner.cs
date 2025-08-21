@@ -480,20 +480,20 @@ class LoopTest
                         var content = await File.ReadAllTextAsync(file);
                         var stopwatch = Stopwatch.StartNew();
 
-                        var fileNodes = await _csharpAnalysisService.AnalyzeControlFlowAsync(content, includeOperations: true);
+                        var analysisResult = await _csharpAnalysisService.AnalyzeControlFlowAsync(content, includeOperations: true);
 
                         stopwatch.Stop();
                         totalDuration = totalDuration.Add(stopwatch.Elapsed);
 
                         // Add file context to node IDs to avoid conflicts
                         var fileName = Path.GetFileNameWithoutExtension(file);
-                        foreach (var node in fileNodes)
+                        foreach (var node in analysisResult.Nodes)
                         {
                             node.Properties["sourceFile"] = file;
                             node.Properties["fileName"] = fileName;
                         }
 
-                        allNodes.AddRange(fileNodes);
+                        allNodes.AddRange(analysisResult.Nodes);
                     }
                     catch (Exception ex)
                     {
@@ -506,7 +506,6 @@ class LoopTest
 
         await DisplayOrExportCfgResults(allNodes, directoryPath, totalDuration, exportFormat, outputPath);
     }
-
     private async Task DisplayOrExportCfgResults(List<KnowledgeNode> nodes, string sourcePath, TimeSpan duration, string? exportFormat, string? outputPath)
     {
         switch (exportFormat?.ToLower())
