@@ -188,22 +188,26 @@ public class CSharpAnalysisService
     {
         try
         {
-            var allNodes = await AnalyzeControlFlowAsync(code, includeOperations);
+            var analysisResult = await AnalyzeControlFlowAsync(code, includeOperations);
+
+            if (!analysisResult.Success)
+            {
+                return null;
+            }
 
             // Find the method node
-            var methodNode = allNodes.FirstOrDefault(n =>
-                n.Type.Primary == "method" &&
+            var methodNode = analysisResult.Nodes.FirstOrDefault(n =>
+                n.Type.Primary == PrimaryNodeType.Method &&
                 n.Label.Equals(methodName, StringComparison.OrdinalIgnoreCase));
 
             return methodNode;
         }
         catch (Exception ex)
         {
-            // System.Diagnostics.Debug.WriteLine($"Method CFG analysis failed: {ex.Message}");
+            // Log error and return null
             return null;
         }
     }
-
     /// <summary>
     /// Check if the service is healthy and can perform analysis
     /// </summary>
