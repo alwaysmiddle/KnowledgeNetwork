@@ -19,7 +19,7 @@ public class CfgToKnowledgeNodeConverter
     public KnowledgeNode ConvertCfgToKnowledgeNode(CSharpControlFlowGraph cfg)
     {
         var methodId = $"method-{cfg.TypeName}-{cfg.MethodName}";
-        
+
         // Create all basic block nodes first
         var blockNodes = new List<KnowledgeNode>();
         foreach (var block in cfg.BasicBlocks)
@@ -37,11 +37,11 @@ public class CfgToKnowledgeNodeConverter
             if (sourceNode != null && targetNode != null)
             {
                 var knowledgeEdge = ConvertEdgeToKnowledgeEdge(edge, sourceNode.Id, targetNode.Id);
-                
+
                 // Add edge IDs to nodes
                 sourceNode.OutgoingEdgeIds.Add(knowledgeEdge.Id);
                 targetNode.IncomingEdgeIds.Add(knowledgeEdge.Id);
-                
+
                 // TODO: Store the edge in the edges collection (would need to be returned from this method)
             }
         }
@@ -111,7 +111,7 @@ public class CfgToKnowledgeNodeConverter
     {
         var nodes = new List<KnowledgeNode>();
         var methodId = $"method-{cfg.TypeName}-{cfg.MethodName}";
-        
+
         // Create all basic block nodes
         var blockNodes = new List<KnowledgeNode>();
         foreach (var block in cfg.BasicBlocks)
@@ -141,11 +141,11 @@ public class CfgToKnowledgeNodeConverter
             if (sourceNode != null && targetNode != null)
             {
                 var knowledgeEdge = ConvertEdgeToKnowledgeEdge(edge, sourceNode.Id, targetNode.Id);
-                
+
                 // Add edge IDs to nodes
                 sourceNode.OutgoingEdgeIds.Add(knowledgeEdge.Id);
                 targetNode.IncomingEdgeIds.Add(knowledgeEdge.Id);
-                
+
                 // TODO: Store the edge in the edges collection (would need to be returned from this method)
             }
         }
@@ -203,14 +203,14 @@ public class CfgToKnowledgeNodeConverter
         };
 
         nodes.Insert(0, methodNode); // Add method node first
-        
+
         return nodes;
     }
 
     private KnowledgeNode ConvertBasicBlockToNode(CSharpBasicBlock block, string methodId, bool includeOperations = true)
     {
         var blockId = $"block-{methodId}-{block.Id}";
-        
+
         return new KnowledgeNode
         {
             Id = blockId,
@@ -270,7 +270,7 @@ public class CfgToKnowledgeNodeConverter
     private KnowledgeNode ConvertOperationToNode(CSharpOperationInfo operation, string blockId, int index)
     {
         var operationId = $"op-{blockId}-{index}";
-        
+
         return new KnowledgeNode
         {
             Id = operationId,
@@ -312,7 +312,7 @@ public class CfgToKnowledgeNodeConverter
     private KnowledgeEdge ConvertEdgeToKnowledgeEdge(CSharpControlFlowEdge edge, string sourceNodeId, string targetNodeId)
     {
         var edgeType = GetEdgeTypeForEdge(edge.Kind);
-        
+
         return new KnowledgeEdge
         {
             Id = $"edge-{sourceNodeId}-to-{targetNodeId}-{edge.Kind}",
@@ -359,7 +359,7 @@ public class CfgToKnowledgeNodeConverter
     private string GetBlockRole(CSharpBasicBlock? block)
     {
         if (block == null) return "block";
-        
+
         return block.Kind switch
         {
             CSharpBasicBlockKind.Entry => "entry",
@@ -435,5 +435,20 @@ public class CfgToKnowledgeNodeConverter
             "variable" => "storage",
             _ => "code"
         };
+    }
+    /// <summary>
+    /// Result of converting a CFG to nodes and edges
+    /// </summary>
+    public class CfgConversionResult
+    {
+        /// <summary>
+        /// All nodes in the CFG (method + basic blocks + operations)
+        /// </summary>
+        public List<KnowledgeNode> Nodes { get; set; } = new();
+
+        /// <summary>
+        /// All edges in the CFG (control flow edges)
+        /// </summary>
+        public List<KnowledgeEdge> Edges { get; set; } = new();
     }
 }
