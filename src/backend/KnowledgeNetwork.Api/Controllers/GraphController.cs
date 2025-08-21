@@ -65,27 +65,36 @@ public class GraphController(CSharpAnalysisService cSharpAnalysisService, ILogge
                 return NotFound($"Node with ID '{request.NodeId}' not found.");
             }
 
-            // Get children based on the node's contains relationship
+            // Get children based on the node's outgoing edges
             var children = new List<KnowledgeNode>();
-            if (allNodes != null)
+            if (allNodes != null && targetNode.OutgoingEdgeIds.Any())
             {
-                foreach (var nodeRef in targetNode.Contains)
+                // Find edges and their target nodes
+                var allEdges = _edgeStorage.Values.SelectMany(edges => edges).ToList();
+                foreach (var edgeId in targetNode.OutgoingEdgeIds)
                 {
-                    var childNode = FindNodeById(allNodes, nodeRef.NodeId);
-                    if (childNode != null)
+                    var edge = allEdges.FirstOrDefault(e => e.Id == edgeId);
+                    if (edge != null)
                     {
-                        children.Add(childNode);
+                        var childNode = FindNodeById(allNodes, edge.TargetNodeId);
+                        if (childNode != null)
+                        {
+                            children.Add(childNode);
+                        }
                     }
                 }
             }
 
             // Include edges if requested
             List<KnowledgeEdge> edges = new();
-            if (request.IncludeRelationships == true)
+            if (request.IncludeEdges == true)
             {
-                // TODO: Implement edge lookup by edge IDs
-                // For now, return empty edges collection
-                // In a real implementation, this would query edges by targetNode.IncomingEdgeIds and OutgoingEdgeIds
+                // Get all edges for this node (incoming and outgoing)
+                var allEdges = _edgeStorage.Values.SelectMany(e => e).ToList();
+                var nodeEdges = allEdges.Where(e => 
+                    targetNode.IncomingEdgeIds.Contains(e.Id) || 
+                    targetNode.OutgoingEdgeIds.Contains(e.Id)).ToList();
+                edges.AddRange(nodeEdges);
             }
 
             var expandedNode = new ExpandedNode
@@ -219,7 +228,6 @@ public class GraphController(CSharpAnalysisService cSharpAnalysisService, ILogge
                 Label = request.Name,
                 IsView = true,
                 IsPersisted = false,
-                Contains = new List<NodeReference>(),
                 Properties = new Dictionary<string, object?>
                 {
                     ["viewType"] = request.AggregationType ?? "custom",
@@ -236,20 +244,40 @@ public class GraphController(CSharpAnalysisService cSharpAnalysisService, ILogge
                 }
             };
 
-            // Add node references if specified
+            // Create edges to referenced nodes if specified
             if (request.NodeIds != null)
             {
+                const string edgeContext = "views";
+                if (!_edgeStorage.ContainsKey(edgeContext))
+                {
+                    _edgeStorage[edgeContext] = new List<KnowledgeEdge>();
+                }
+
                 for (int i = 0; i < request.NodeIds.Count; i++)
                 {
-                    viewNode.Contains.Add(new NodeReference
+                    var edge = new KnowledgeEdge
                     {
-                        NodeId = request.NodeIds[i],
-                        Role = "aggregated",
-                        Order = i
-                    });
+                        Id = $"edge-view-{viewNode.Id}-to-{request.NodeIds[i]}",
+                        SourceNodeId = viewNode.Id,
+                        TargetNodeId = request.NodeIds[i],
+                        Type = EdgeTypes.Contains,
+                        Category = EdgeCategories.Structure,
+                        Properties = new Dictionary<string, object?>
+                        {
+                            ["role"] = "aggregated",
+                            ["order"] = i
+                        },
+                        Strength = 1.0,
+                        Confidence = 1.0,
+                        Temporal = new TemporalData()
+                    };
+                    
+                    _edgeStorage[edgeContext].Add(edge);
+                    viewNode.OutgoingEdgeIds.Add(edge.Id);
                 }
 
                 viewNode.Metrics.NodeCount = request.NodeIds.Count;
+                viewNode.Metrics.OutgoingEdgeCount = request.NodeIds.Count;
             }
 
             // Store the view (in a real implementation, this would be persisted)

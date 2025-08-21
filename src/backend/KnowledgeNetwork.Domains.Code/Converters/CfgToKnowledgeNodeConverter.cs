@@ -58,12 +58,7 @@ public class CfgToKnowledgeNodeConverter
             },
             Label = cfg.MethodName,
             SourceLanguage = "csharp",
-            Contains = blockNodes.Select((node, index) => new NodeReference
-            {
-                NodeId = node.Id,
-                Role = GetBlockRole(cfg.BasicBlocks.FirstOrDefault(b => node.Id.EndsWith($"-{b.Id}"))),
-                Order = index
-            }).ToList(),
+            // Contains relationships converted to edges (will be handled separately)
             Properties = new Dictionary<string, object?>
             {
                 ["typeName"] = cfg.TypeName,
@@ -85,7 +80,7 @@ public class CfgToKnowledgeNodeConverter
             {
                 Complexity = cfg.Metrics.CyclomaticComplexity,
                 NodeCount = cfg.BasicBlocks.Count,
-                EdgeCount = cfg.Edges.Count,
+                OutgoingEdgeCount = cfg.Edges.Count,
                 CustomMetrics = new Dictionary<string, object?>
                 {
                     ["decisionPoints"] = cfg.Metrics.DecisionPoints,
@@ -167,12 +162,7 @@ public class CfgToKnowledgeNodeConverter
             },
             Label = cfg.MethodName,
             SourceLanguage = "csharp",
-            Contains = blockNodes.Select((node, index) => new NodeReference
-            {
-                NodeId = node.Id,
-                Role = GetBlockRole(cfg.BasicBlocks.FirstOrDefault(b => node.Id.EndsWith($"-{b.Id}"))),
-                Order = index
-            }).ToList(),
+            // Contains relationships converted to edges (will be handled separately)
             Properties = new Dictionary<string, object?>
             {
                 ["typeName"] = cfg.TypeName,
@@ -194,7 +184,7 @@ public class CfgToKnowledgeNodeConverter
             {
                 Complexity = cfg.Metrics.CyclomaticComplexity,
                 NodeCount = cfg.BasicBlocks.Count,
-                EdgeCount = cfg.Edges.Count,
+                OutgoingEdgeCount = cfg.Edges.Count,
                 CustomMetrics = new Dictionary<string, object?>
                 {
                     ["decisionPoints"] = cfg.Metrics.DecisionPoints,
@@ -232,12 +222,7 @@ public class CfgToKnowledgeNodeConverter
             },
             Label = $"Block {block.Ordinal}",
             SourceLanguage = "csharp",
-            Contains = includeOperations ? block.Operations.Select((op, index) => new NodeReference
-            {
-                NodeId = $"op-{blockId}-{index}",
-                Role = "operation",
-                Order = index
-            }).ToList() : new List<NodeReference>(),
+            // Contains relationships converted to edges (will be handled separately)
             Properties = new Dictionary<string, object?>
             {
                 ["ordinal"] = block.Ordinal,

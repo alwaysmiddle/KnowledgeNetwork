@@ -17,9 +17,7 @@ public class KnowledgeNode
     [JsonPropertyName("label")]
     public string Label { get; set; } = string.Empty;
 
-    // Recursive structure - nodes contain references to other nodes
-    [JsonPropertyName("contains")]
-    public List<NodeReference> Contains { get; set; } = new();
+    // Pure edge-centric design - all relationships are edges
 
     // Edge references (first-class edges)
     [JsonPropertyName("incomingEdgeIds")]

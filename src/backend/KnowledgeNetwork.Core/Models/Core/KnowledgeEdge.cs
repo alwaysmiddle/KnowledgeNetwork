@@ -66,4 +66,10 @@ public class KnowledgeEdge
     /// </summary>
     [JsonPropertyName("temporal")]
     public TemporalData Temporal { get; set; } = new();
+
+    /// <summary>
+    /// Visualization hints for rendering this edge
+    /// </summary>
+    [JsonPropertyName("visualizationHints")]
+    public EdgeVisualizationHints VisualizationHints { get; set; } = new();
 }

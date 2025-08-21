@@ -129,10 +129,10 @@ public class KnowledgeNodeFormatter
 
         foreach (var method in methodNodes)
         {
-            var blockCount = method.Contains.Count;
+            var blockCount = method.OutgoingEdgeIds.Count;
             var totalOperations = nodes
                 .Where(n => n.Type.Primary == "operation" && 
-                           method.Contains.Any(c => n.Id.StartsWith($"op-block-{method.Id}")))
+                           n.Id.Contains(method.Id))
                 .Count();
 
             var complexityColor = GetComplexityColor(method.Metrics.Complexity);
@@ -166,14 +166,15 @@ public class KnowledgeNodeFormatter
         AnsiConsole.Write($"[{complexityColor}](Complexity: {methodNode.Metrics.Complexity ?? 0})[/]");
         AnsiConsole.WriteLine();
 
-        // Display basic blocks
-        foreach (var blockRef in methodNode.Contains)
+        // Display basic blocks (note: edges would need to be passed to show actual child nodes)
+        // For now, find related nodes by ID pattern
+        var relatedBlocks = allNodes.Where(n => 
+            n.Type.Primary == "basic-block" && 
+            n.Id.Contains(methodNode.Id)).ToList();
+        
+        foreach (var blockNode in relatedBlocks)
         {
-            var blockNode = allNodes.FirstOrDefault(n => n.Id == blockRef.NodeId);
-            if (blockNode != null)
-            {
-                DisplayBasicBlockNode(blockNode, allNodes, "  ");
-            }
+            DisplayBasicBlockNode(blockNode, allNodes, "  ");
         }
     }
 
@@ -232,22 +233,18 @@ public class KnowledgeNodeFormatter
         
         AnsiConsole.WriteLine();
         AnsiConsole.Write($"[{viewColor}]👁️ View: {viewNode.Label}[/]");
-        AnsiConsole.Write($" [gray]({viewNode.Contains.Count} items)[/]");
+        AnsiConsole.Write($" [gray]({viewNode.OutgoingEdgeIds.Count} edge references)[/]");
         AnsiConsole.WriteLine();
 
-        foreach (var nodeRef in viewNode.Contains.Take(10)) // Show first 10
+        // Show edge IDs (in a real implementation, edges would be resolved to show actual target nodes)
+        foreach (var edgeId in viewNode.OutgoingEdgeIds.Take(10)) // Show first 10
         {
-            var containedNode = allNodes.FirstOrDefault(n => n.Id == nodeRef.NodeId);
-            if (containedNode != null)
-            {
-                var nodeColor = GetNodeColor(containedNode.Type.Primary);
-                AnsiConsole.WriteLine($"  [{nodeColor}]• {containedNode.Label}[/]");
-            }
+            AnsiConsole.WriteLine($"  [gray]• Edge Reference: {edgeId}[/]");
         }
 
-        if (viewNode.Contains.Count > 10)
+        if (viewNode.OutgoingEdgeIds.Count > 10)
         {
-            AnsiConsole.WriteLine($"  [gray]... and {viewNode.Contains.Count - 10} more items[/]");
+            AnsiConsole.WriteLine($"  [gray]... and {viewNode.OutgoingEdgeIds.Count - 10} more edge references[/]");
         }
     }
 
