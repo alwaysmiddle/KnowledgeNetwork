@@ -36,12 +36,13 @@ public class CfgToKnowledgeNodeConverter
 
             if (sourceNode != null && targetNode != null)
             {
-                var relationship = ConvertEdgeToRelationship(edge, targetNode.Id);
-                sourceNode.Relationships.Add(relationship);
-
-                // Add reverse relationship
-                var reverseRelationship = ConvertEdgeToReverseRelationship(edge, sourceNode.Id);
-                targetNode.Relationships.Add(reverseRelationship);
+                var knowledgeEdge = ConvertEdgeToKnowledgeEdge(edge, sourceNode.Id, targetNode.Id);
+                
+                // Add edge IDs to nodes
+                sourceNode.OutgoingEdgeIds.Add(knowledgeEdge.Id);
+                targetNode.IncomingEdgeIds.Add(knowledgeEdge.Id);
+                
+                // TODO: Store the edge in the edges collection (would need to be returned from this method)
             }
         }
 
@@ -144,11 +145,13 @@ public class CfgToKnowledgeNodeConverter
 
             if (sourceNode != null && targetNode != null)
             {
-                var relationship = ConvertEdgeToRelationship(edge, targetNode.Id);
-                sourceNode.Relationships.Add(relationship);
-
-                var reverseRelationship = ConvertEdgeToReverseRelationship(edge, sourceNode.Id);
-                targetNode.Relationships.Add(reverseRelationship);
+                var knowledgeEdge = ConvertEdgeToKnowledgeEdge(edge, sourceNode.Id, targetNode.Id);
+                
+                // Add edge IDs to nodes
+                sourceNode.OutgoingEdgeIds.Add(knowledgeEdge.Id);
+                targetNode.IncomingEdgeIds.Add(knowledgeEdge.Id);
+                
+                // TODO: Store the edge in the edges collection (would need to be returned from this method)
             }
         }
 
@@ -321,58 +324,39 @@ public class CfgToKnowledgeNodeConverter
         };
     }
 
-    private RelationshipPair ConvertEdgeToRelationship(CSharpControlFlowEdge edge, string targetNodeId)
+    private KnowledgeEdge ConvertEdgeToKnowledgeEdge(CSharpControlFlowEdge edge, string sourceNodeId, string targetNodeId)
     {
-        var relationshipType = GetRelationshipTypeForEdge(edge.Kind);
+        var edgeType = GetEdgeTypeForEdge(edge.Kind);
         
-        return new RelationshipPair
+        return new KnowledgeEdge
         {
-            Type = relationshipType,
-            Direction = "outgoing",
+            Id = $"edge-{sourceNodeId}-to-{targetNodeId}-{edge.Kind}",
+            SourceNodeId = sourceNodeId,
             TargetNodeId = targetNodeId,
-            Metadata = new Dictionary<string, object?>
+            Type = edgeType,
+            Category = EdgeCategories.ControlFlow,
+            Properties = new Dictionary<string, object?>
             {
                 ["edgeKind"] = edge.Kind.ToString(),
                 ["condition"] = edge.Condition?.ToString(),
                 ["isConditional"] = edge.Kind == CSharpEdgeKind.ConditionalTrue || edge.Kind == CSharpEdgeKind.ConditionalFalse,
                 ["isBackEdge"] = edge.Kind == CSharpEdgeKind.BackEdge
-            }
-        };
-    }
-
-    private RelationshipPair ConvertEdgeToReverseRelationship(CSharpControlFlowEdge edge, string sourceNodeId)
-    {
-        var relationshipType = GetRelationshipTypeForEdge(edge.Kind);
-        
-        return new RelationshipPair
-        {
-            Type = new RelationshipType
-            {
-                Forward = relationshipType.Reverse,
-                Reverse = relationshipType.Forward,
-                Category = relationshipType.Category
             },
-            Direction = "incoming",
-            TargetNodeId = sourceNodeId,
-            Metadata = new Dictionary<string, object?>
-            {
-                ["edgeKind"] = edge.Kind.ToString(),
-                ["condition"] = edge.Condition?.ToString(),
-                ["isConditional"] = edge.Kind == CSharpEdgeKind.ConditionalTrue || edge.Kind == CSharpEdgeKind.ConditionalFalse,
-                ["isBackEdge"] = edge.Kind == CSharpEdgeKind.BackEdge
-            }
+            Strength = 1.0,
+            Confidence = 1.0,
+            Temporal = new TemporalData()
         };
     }
 
-    private RelationshipType GetRelationshipTypeForEdge(CSharpEdgeKind edgeKind)
+    private string GetEdgeTypeForEdge(CSharpEdgeKind edgeKind)
     {
         return edgeKind switch
         {
-            CSharpEdgeKind.Regular => RelationshipTypes.FlowsTo,
-            CSharpEdgeKind.ConditionalTrue => RelationshipTypes.BranchesTo,
-            CSharpEdgeKind.ConditionalFalse => RelationshipTypes.BranchesTo,
-            CSharpEdgeKind.BackEdge => RelationshipTypes.LoopsTo,
-            _ => RelationshipTypes.FlowsTo
+            CSharpEdgeKind.Regular => EdgeTypes.FlowsTo,
+            CSharpEdgeKind.ConditionalTrue => EdgeTypes.BranchesTo,
+            CSharpEdgeKind.ConditionalFalse => EdgeTypes.BranchesTo,
+            CSharpEdgeKind.BackEdge => EdgeTypes.LoopsTo,
+            _ => EdgeTypes.FlowsTo
         };
     }
 

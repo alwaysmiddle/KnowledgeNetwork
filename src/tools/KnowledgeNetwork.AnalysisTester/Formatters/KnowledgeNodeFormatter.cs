@@ -65,17 +65,16 @@ public class KnowledgeNodeFormatter
 
         foreach (var node in nodes)
         {
-            foreach (var relationship in node.Relationships)
+            // Show edge references (edges would need to be passed separately to show details)
+            foreach (var edgeId in node.OutgoingEdgeIds)
             {
                 var sourceColor = GetNodeColor(node.Type.Primary);
-                var targetNode = nodes.FirstOrDefault(n => n.Id == relationship.TargetNodeId);
-                var targetColor = targetNode != null ? GetNodeColor(targetNode.Type.Primary) : "gray";
 
                 table.AddRow(
                     $"[{sourceColor}]{node.Label}[/]",
-                    $"[cyan]{relationship.Type.Forward}[/]",
-                    $"[{targetColor}]{targetNode?.Label ?? relationship.TargetNodeId}[/]",
-                    $"[yellow]{relationship.Type.Category}[/]"
+                    $"[cyan]edge-reference[/]",
+                    $"[gray]{edgeId}[/]",
+                    $"[yellow]reference[/]"
                 );
             }
         }
@@ -143,7 +142,7 @@ public class KnowledgeNodeFormatter
                 $"[{complexityColor}]{method.Metrics.Complexity ?? 0}[/]",
                 $"[blue]{blockCount}[/]",
                 $"[cyan]{totalOperations}[/]",
-                $"[magenta]{method.Relationships.Count}[/]"
+                $"[magenta]{method.IncomingEdgeIds.Count + method.OutgoingEdgeIds.Count}[/]"
             );
         }
 
@@ -277,10 +276,10 @@ public class KnowledgeNodeFormatter
 
         AnsiConsole.Write(table);
 
-        // Total relationships
-        var totalRelationships = nodes.SelectMany(n => n.Relationships).Count();
+        // Total edge references
+        var totalEdgeReferences = nodes.Sum(n => n.IncomingEdgeIds.Count + n.OutgoingEdgeIds.Count);
         AnsiConsole.WriteLine($"\n[cyan]Total Nodes:[/] {nodes.Count}");
-        AnsiConsole.WriteLine($"[cyan]Total Relationships:[/] {totalRelationships}");
+        AnsiConsole.WriteLine($"[cyan]Total Edge References:[/] {totalEdgeReferences}");
     }
 
     private string GetNodeColor(string nodeType)

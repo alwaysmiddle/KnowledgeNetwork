@@ -19,8 +19,9 @@ namespace KnowledgeNetwork.Api.Controllers;
 public class GraphController(CSharpAnalysisService cSharpAnalysisService, ILogger<GraphController> logger)
     : ControllerBase
 {
-    // In-memory storage for nodes (in a real implementation, this would be a database)
+    // In-memory storage for nodes and edges (in a real implementation, this would be a database)
     private static readonly Dictionary<string, List<KnowledgeNode>> _nodeStorage = new();
+    private static readonly Dictionary<string, List<KnowledgeEdge>> _edgeStorage = new();
 
     /// <summary>
     /// Expand a specific node to load its children and relationships
@@ -78,18 +79,20 @@ public class GraphController(CSharpAnalysisService cSharpAnalysisService, ILogge
                 }
             }
 
-            // Include relationships if requested
-            List<RelationshipPair>? relationships = null;
+            // Include edges if requested
+            List<KnowledgeEdge> edges = new();
             if (request.IncludeRelationships == true)
             {
-                relationships = targetNode.Relationships;
+                // TODO: Implement edge lookup by edge IDs
+                // For now, return empty edges collection
+                // In a real implementation, this would query edges by targetNode.IncomingEdgeIds and OutgoingEdgeIds
             }
 
             var expandedNode = new ExpandedNode
             {
                 Node = targetNode,
                 Children = children,
-                Relationships = relationships
+                Edges = edges
             };
 
             stopwatch.Stop();
@@ -300,6 +303,150 @@ public class GraphController(CSharpAnalysisService cSharpAnalysisService, ILogge
         {
             logger.LogError(ex, "Error occurred during node storage");
             return StatusCode(500, "An error occurred during node storage.");
+        }
+    }
+
+    /// <summary>
+    /// Get edges for a specific node
+    /// </summary>
+    /// <param name="nodeId">Node ID to get edges for</param>
+    /// <returns>List of edges connected to the node</returns>
+    [HttpGet("edges/{nodeId}")]
+    [ProducesResponseType(typeof(List<KnowledgeEdge>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<KnowledgeEdge>>> GetNodeEdges(string nodeId)
+    {
+        try
+        {
+            logger.LogInformation("Getting edges for node {NodeId}", nodeId);
+            
+            var allEdges = _edgeStorage.Values.SelectMany(edges => edges).ToList();
+            var nodeEdges = allEdges.Where(e => e.SourceNodeId == nodeId || e.TargetNodeId == nodeId).ToList();
+            
+            return Ok(nodeEdges);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting edges for node");
+            return StatusCode(500, "An error occurred while getting edges.");
+        }
+    }
+
+    /// <summary>
+    /// Create a new edge between nodes
+    /// </summary>
+    /// <param name="edge">Edge to create</param>
+    /// <returns>Created edge</returns>
+    [HttpPost("edges")]
+    [ProducesResponseType(typeof(KnowledgeEdge), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<KnowledgeEdge>> CreateEdge([FromBody] KnowledgeEdge edge)
+    {
+        try
+        {
+            logger.LogInformation("Creating edge from {SourceId} to {TargetId}", edge.SourceNodeId, edge.TargetNodeId);
+            
+            // Generate ID if not provided
+            if (string.IsNullOrEmpty(edge.Id))
+            {
+                edge.Id = $"edge-{Guid.NewGuid()}";
+            }
+            
+            // Set temporal data
+            edge.Temporal = new TemporalData();
+            
+            // Store edge
+            const string edgeContext = "manual";
+            if (!_edgeStorage.ContainsKey(edgeContext))
+            {
+                _edgeStorage[edgeContext] = new List<KnowledgeEdge>();
+            }
+            _edgeStorage[edgeContext].Add(edge);
+            
+            return CreatedAtAction(nameof(GetNodeEdges), new { nodeId = edge.SourceNodeId }, edge);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while creating edge");
+            return StatusCode(500, "An error occurred while creating edge.");
+        }
+    }
+
+    /// <summary>
+    /// Update an existing edge
+    /// </summary>
+    /// <param name="edgeId">Edge ID to update</param>
+    /// <param name="edge">Updated edge data</param>
+    /// <returns>Updated edge</returns>
+    [HttpPut("edges/{edgeId}")]
+    [ProducesResponseType(typeof(KnowledgeEdge), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<KnowledgeEdge>> UpdateEdge(string edgeId, [FromBody] KnowledgeEdge edge)
+    {
+        try
+        {
+            logger.LogInformation("Updating edge {EdgeId}", edgeId);
+            
+            var allEdges = _edgeStorage.Values.SelectMany(edges => edges).ToList();
+            var existingEdge = allEdges.FirstOrDefault(e => e.Id == edgeId);
+            
+            if (existingEdge == null)
+            {
+                return NotFound($"Edge with ID '{edgeId}' not found.");
+            }
+            
+            // Update properties
+            existingEdge.Type = edge.Type;
+            existingEdge.Category = edge.Category;
+            existingEdge.Properties = edge.Properties;
+            existingEdge.Metrics = edge.Metrics;
+            existingEdge.Strength = edge.Strength;
+            existingEdge.Confidence = edge.Confidence;
+            existingEdge.Temporal.LastModified = DateTime.UtcNow;
+            
+            return Ok(existingEdge);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while updating edge");
+            return StatusCode(500, "An error occurred while updating edge.");
+        }
+    }
+
+    /// <summary>
+    /// Delete an edge
+    /// </summary>
+    /// <param name="edgeId">Edge ID to delete</param>
+    /// <returns>Success confirmation</returns>
+    [HttpDelete("edges/{edgeId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult> DeleteEdge(string edgeId)
+    {
+        try
+        {
+            logger.LogInformation("Deleting edge {EdgeId}", edgeId);
+            
+            foreach (var edgeList in _edgeStorage.Values)
+            {
+                var edge = edgeList.FirstOrDefault(e => e.Id == edgeId);
+                if (edge != null)
+                {
+                    edgeList.Remove(edge);
+                    return NoContent();
+                }
+            }
+            
+            return NotFound($"Edge with ID '{edgeId}' not found.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while deleting edge");
+            return StatusCode(500, "An error occurred while deleting edge.");
         }
     }
 

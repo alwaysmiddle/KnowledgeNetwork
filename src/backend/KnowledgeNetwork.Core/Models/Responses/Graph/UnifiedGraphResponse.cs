@@ -12,6 +12,9 @@ public class UnifiedGraphResponse
     [JsonPropertyName("nodes")]
     public List<KnowledgeNode> Nodes { get; set; } = new();
 
+    [JsonPropertyName("edges")]
+    public List<KnowledgeEdge> Edges { get; set; } = new();
+
     [JsonPropertyName("metadata")]
     public GraphMetadata Metadata { get; set; } = new();
 }

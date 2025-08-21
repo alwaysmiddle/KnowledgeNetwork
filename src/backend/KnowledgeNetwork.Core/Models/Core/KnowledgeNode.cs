@@ -21,9 +21,12 @@ public class KnowledgeNode
     [JsonPropertyName("contains")]
     public List<NodeReference> Contains { get; set; } = new();
 
-    // Bidirectional relationships
-    [JsonPropertyName("relationships")]
-    public List<RelationshipPair> Relationships { get; set; } = new();
+    // Edge references (first-class edges)
+    [JsonPropertyName("incomingEdgeIds")]
+    public List<string> IncomingEdgeIds { get; set; } = new();
+
+    [JsonPropertyName("outgoingEdgeIds")]
+    public List<string> OutgoingEdgeIds { get; set; } = new();
 
     // Flexible metadata
     [JsonPropertyName("properties")]

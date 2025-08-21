@@ -1,127 +1,48 @@
-using KnowledgeNetwork.Core.Models.Core;
-
 namespace KnowledgeNetwork.Core.Models.Constants;
 
 /// <summary>
-/// Predefined bidirectional relationship types with categories
+/// Predefined edge types for relationships between nodes
 /// </summary>
-public static class RelationshipTypes
+public static class EdgeTypes
 {
     // Structural Relationships
-    public static readonly RelationshipType Contains = new()
-    {
-        Forward = "contains",
-        Reverse = "contained-by",
-        Category = "structure"
-    };
-
-    public static readonly RelationshipType Inherits = new()
-    {
-        Forward = "inherits-from",
-        Reverse = "inherited-by",
-        Category = "structure"
-    };
-
-    public static readonly RelationshipType Implements = new()
-    {
-        Forward = "implements",
-        Reverse = "implemented-by",
-        Category = "structure"
-    };
+    public const string Contains = "contains";
+    public const string Inherits = "inherits-from";
+    public const string Implements = "implements";
 
     // Execution Relationships
-    public static readonly RelationshipType Calls = new()
-    {
-        Forward = "calls",
-        Reverse = "called-by",
-        Category = "execution"
-    };
-
-    public static readonly RelationshipType Creates = new()
-    {
-        Forward = "creates",
-        Reverse = "created-by",
-        Category = "execution"
-    };
-
-    public static readonly RelationshipType Throws = new()
-    {
-        Forward = "throws",
-        Reverse = "thrown-by",
-        Category = "execution"
-    };
+    public const string Calls = "calls";
+    public const string Creates = "creates";
+    public const string Throws = "throws";
 
     // Control Flow Relationships
-    public static readonly RelationshipType FlowsTo = new()
-    {
-        Forward = "flows-to",
-        Reverse = "flows-from",
-        Category = "control-flow"
-    };
-
-    public static readonly RelationshipType BranchesTo = new()
-    {
-        Forward = "branches-to",
-        Reverse = "branches-from",
-        Category = "control-flow"
-    };
-
-    public static readonly RelationshipType LoopsTo = new()
-    {
-        Forward = "loops-to",
-        Reverse = "loops-from",
-        Category = "control-flow"
-    };
+    public const string FlowsTo = "flows-to";
+    public const string BranchesTo = "branches-to";
+    public const string LoopsTo = "loops-to";
 
     // Dependency Relationships
-    public static readonly RelationshipType DependsOn = new()
-    {
-        Forward = "depends-on",
-        Reverse = "dependency-of",
-        Category = "dependency"
-    };
-
-    public static readonly RelationshipType Imports = new()
-    {
-        Forward = "imports",
-        Reverse = "imported-by",
-        Category = "dependency"
-    };
-
-    public static readonly RelationshipType References = new()
-    {
-        Forward = "references",
-        Reverse = "referenced-by",
-        Category = "dependency"
-    };
+    public const string DependsOn = "depends-on";
+    public const string Imports = "imports";
+    public const string References = "references";
 
     // Documentation Relationships
-    public static readonly RelationshipType Documents = new()
-    {
-        Forward = "documents",
-        Reverse = "documented-by",
-        Category = "documentation"
-    };
-
-    public static readonly RelationshipType Explains = new()
-    {
-        Forward = "explains",
-        Reverse = "explained-by",
-        Category = "documentation"
-    };
+    public const string Documents = "documents";
+    public const string Explains = "explains";
 
     // View Relationships
-    public static readonly RelationshipType Aggregates = new()
-    {
-        Forward = "aggregates",
-        Reverse = "aggregated-by",
-        Category = "view"
-    };
+    public const string Aggregates = "aggregates";
+    public const string FocusesOn = "focuses-on";
+}
 
-    public static readonly RelationshipType FocusesOn = new()
-    {
-        Forward = "focuses-on",
-        Reverse = "focused-by",
-        Category = "view"
-    };
+/// <summary>
+/// Categories for edge types
+/// </summary>
+public static class EdgeCategories
+{
+    public const string Structure = "structure";
+    public const string Execution = "execution";
+    public const string ControlFlow = "control-flow";
+    public const string Dependency = "dependency";
+    public const string Documentation = "documentation";
+    public const string View = "view";
 }
