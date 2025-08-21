@@ -266,9 +266,9 @@ public class CSharpControlFlowAnalyzer
             var sourceBlock = kvp.Value;
 
             // Add fall-through successor
-            if (roslynBlock.FallThroughSuccessor != null && blockMap.ContainsKey(roslynBlock.FallThroughSuccessor))
+            if (roslynBlock.FallThroughSuccessor != null && roslynBlock.FallThroughSuccessor.Destination != null && blockMap.ContainsKey(roslynBlock.FallThroughSuccessor.Destination))
             {
-                var targetBlock = blockMap[roslynBlock.FallThroughSuccessor];
+                var targetBlock = blockMap[roslynBlock.FallThroughSuccessor.Destination];
                 var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
                 edge.Kind = CSharpEdgeKind.Regular;
                 edge.Label = "fallthrough";
