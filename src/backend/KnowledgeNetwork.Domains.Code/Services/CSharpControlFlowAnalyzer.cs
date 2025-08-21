@@ -212,7 +212,6 @@ public class CSharpControlFlowAnalyzer
             return null;
         }
     }
-
     /// <summary>
     /// Convert Roslyn ControlFlowGraph to our domain model
     /// </summary>
@@ -237,38 +236,69 @@ public class CSharpControlFlowAnalyzer
             blockMap[block] = domainBlock;
         }
 
-        // Identify entry and exit blocks - simplified approach
+        // Identify entry and exit blocks using Roslyn's structure
         if (cfg.Blocks.Length > 0)
         {
-            var firstBlock = blockMap[cfg.Blocks[0]];
-            firstBlock.Kind = CSharpBasicBlockKind.Entry;
-            domainCfg.EntryBlock = firstBlock;
+            // Use the first block as entry (Roslyn guarantees this)
+            var entryBlock = blockMap[cfg.Blocks[0]];
+            entryBlock.Kind = CSharpBasicBlockKind.Entry;
+            domainCfg.EntryBlock = entryBlock;
 
-            if (cfg.Blocks.Length > 1)
+            // Find exit blocks (blocks with no successors or special exit blocks)
+            foreach (var kvp in blockMap)
             {
-                var lastBlock = blockMap[cfg.Blocks[cfg.Blocks.Length - 1]];
-                lastBlock.Kind = CSharpBasicBlockKind.Exit;
-                domainCfg.ExitBlock = lastBlock;
-            }
-            else
-            {
-                // Single block method - it's both entry and exit
-                firstBlock.Kind = CSharpBasicBlockKind.Entry;
-                domainCfg.ExitBlock = firstBlock;
+                var roslynBlock = kvp.Key;
+                var domainBlock = kvp.Value;
+
+                // Check if this is an exit block (no successors)
+                if (roslynBlock.ConditionalSuccessor == null && roslynBlock.FallThroughSuccessor == null)
+                {
+                    domainBlock.Kind = CSharpBasicBlockKind.Exit;
+                    domainCfg.ExitBlock = domainBlock; // Use the last one found
+                }
             }
         }
 
-        // Create simple sequential edges for now
-        for (int i = 0; i < cfg.Blocks.Length - 1; i++)
+        // Create edges based on actual Roslyn CFG structure
+        foreach (var kvp in blockMap)
         {
-            var sourceBlock = blockMap[cfg.Blocks[i]];
-            var targetBlock = blockMap[cfg.Blocks[i + 1]];
+            var roslynBlock = kvp.Key;
+            var sourceBlock = kvp.Value;
 
-            var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
-            domainCfg.Edges.Add(edge);
+            // Add fall-through successor
+            if (roslynBlock.FallThroughSuccessor != null && blockMap.ContainsKey(roslynBlock.FallThroughSuccessor))
+            {
+                var targetBlock = blockMap[roslynBlock.FallThroughSuccessor];
+                var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
+                edge.Kind = CSharpEdgeKind.Regular;
+                edge.Label = "fallthrough";
 
-            sourceBlock.Successors.Add(targetBlock.Id);
-            targetBlock.Predecessors.Add(sourceBlock.Id);
+                domainCfg.Edges.Add(edge);
+                sourceBlock.Successors.Add(targetBlock.Id);
+                targetBlock.Predecessors.Add(sourceBlock.Id);
+            }
+
+            // Add conditional successor
+            if (roslynBlock.ConditionalSuccessor != null && blockMap.ContainsKey(roslynBlock.ConditionalSuccessor))
+            {
+                var targetBlock = blockMap[roslynBlock.ConditionalSuccessor];
+                var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
+                edge.Kind = CSharpEdgeKind.ConditionalTrue;
+                edge.Label = "condition";
+
+                if (sourceBlock.BranchInfo != null)
+                {
+                    edge.Condition = new CSharpEdgeCondition
+                    {
+                        BooleanValue = true,
+                        Description = sourceBlock.BranchInfo.Condition
+                    };
+                }
+
+                domainCfg.Edges.Add(edge);
+                sourceBlock.Successors.Add(targetBlock.Id);
+                targetBlock.Predecessors.Add(sourceBlock.Id);
+            }
         }
 
         // Calculate reachability
@@ -279,7 +309,6 @@ public class CSharpControlFlowAnalyzer
 
         return domainCfg;
     }
-
     /// <summary>
     /// Convert Roslyn BasicBlock to our domain model
     /// </summary>
@@ -452,7 +481,7 @@ public class CSharpControlFlowAnalyzer
 
     #region Helper Methods for Operation Analysis
 
-    private string GetMethodName(ISymbol methodSymbol) => 
+    private string GetMethodName(ISymbol methodSymbol) =>
         methodSymbol.ToDisplayString(SymbolDisplayFormat.CSharpShortErrorMessageFormat);
 
     private CSharpLocationInfo CreateLocationInfo(SyntaxNode node)
@@ -486,32 +515,32 @@ public class CSharpControlFlowAnalyzer
         _ => false
     };
 
-    private string GetLeftSide(IOperation operation) => 
+    private string GetLeftSide(IOperation operation) =>
         operation is ISimpleAssignmentOperation assignment ? assignment.Target?.Syntax?.ToString() ?? "" : "";
 
-    private string GetRightSide(IOperation operation) => 
+    private string GetRightSide(IOperation operation) =>
         operation is ISimpleAssignmentOperation assignment ? assignment.Value?.Syntax?.ToString() ?? "" : "";
 
-    private string GetVariableName(IOperation operation) => 
+    private string GetVariableName(IOperation operation) =>
         operation is IVariableDeclaratorOperation declarator ? declarator.Symbol?.Name ?? "" : "";
 
-    private string GetInvocationSummary(IOperation operation) => 
-        operation is IInvocationOperation invocation ? 
-            $"{invocation.TargetMethod?.Name ?? "unknown"}({new string(',', Math.Max(0, invocation.Arguments.Length - 1))})" : 
+    private string GetInvocationSummary(IOperation operation) =>
+        operation is IInvocationOperation invocation ?
+            $"{invocation.TargetMethod?.Name ?? "unknown"}({new string(',', Math.Max(0, invocation.Arguments.Length - 1))})" :
             "method call";
 
-    private string GetReturnValue(IOperation operation) => 
+    private string GetReturnValue(IOperation operation) =>
         operation is IReturnOperation returnOp ? returnOp.ReturnedValue?.Syntax?.ToString() ?? "" : "";
 
-    private string GetConditionalExpression(IOperation operation) => 
+    private string GetConditionalExpression(IOperation operation) =>
         operation is IConditionalOperation conditional ? conditional.Condition?.Syntax?.ToString() ?? "" : "";
 
-    private string GetBinaryOperatorSummary(IOperation operation) => 
-        operation is IBinaryOperation binary ? 
-            $"{binary.LeftOperand?.Syntax?.ToString() ?? ""} {binary.OperatorKind} {binary.RightOperand?.Syntax?.ToString() ?? ""}" : 
+    private string GetBinaryOperatorSummary(IOperation operation) =>
+        operation is IBinaryOperation binary ?
+            $"{binary.LeftOperand?.Syntax?.ToString() ?? ""} {binary.OperatorKind} {binary.RightOperand?.Syntax?.ToString() ?? ""}" :
             "";
 
-    private string GetLoopSummary(IOperation operation) => 
+    private string GetLoopSummary(IOperation operation) =>
         operation is ILoopOperation loop ? loop.LoopKind switch
         {
             LoopKind.For => "for loop",
