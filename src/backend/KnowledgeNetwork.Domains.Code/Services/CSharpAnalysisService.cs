@@ -332,6 +332,120 @@ public class CSharpAnalysisService
             MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location)
         ];
     }
+    /// <summary>
+    /// Create a simple mock CFG for testing the edge-centric pipeline
+    /// </summary>
+    /// <param name="code">C# source code (used for basic analysis)</param>
+    /// <returns>Simple mock CFG with basic blocks and edges</returns>
+    private CSharpControlFlowGraph CreateSimpleMockCfg(string code)
+    {
+        var cfg = new CSharpControlFlowGraph
+        {
+            MethodName = "MockMethod",
+            TypeName = "MockClass",
+            Location = new KnowledgeNetwork.Domains.Code.Models.Common.CSharpLocationInfo
+            {
+                StartLine = 1,
+                StartColumn = 1,
+                EndLine = 10,
+                EndColumn = 1
+            }
+        };
 
+        // Create a simple 3-block CFG: Entry -> Conditional -> Exit
+        var entryBlock = new KnowledgeNetwork.Domains.Code.Models.CSharpBasicBlock
+        {
+            Id = 0,
+            Ordinal = 0,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpBasicBlockKind.Entry,
+            IsReachable = true
+        };
+
+        var conditionalBlock = new KnowledgeNetwork.Domains.Code.Models.CSharpBasicBlock
+        {
+            Id = 1,
+            Ordinal = 1,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpBasicBlockKind.Block,
+            IsReachable = true,
+            BranchInfo = new KnowledgeNetwork.Domains.Code.Models.ControlFlow.CSharpBranchInfo
+            {
+                Condition = "x > 0",
+                BranchType = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpBranchType.Conditional
+            }
+        };
+
+        var exitBlock = new KnowledgeNetwork.Domains.Code.Models.CSharpBasicBlock
+        {
+            Id = 2,
+            Ordinal = 2,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpBasicBlockKind.Exit,
+            IsReachable = true
+        };
+
+        // Add some mock operations
+        entryBlock.Operations.Add(new KnowledgeNetwork.Domains.Code.Models.ControlFlow.CSharpOperationInfo
+        {
+            OperationKind = "VariableDeclarator",
+            Syntax = "int x",
+            Summary = "var x"
+        });
+
+        conditionalBlock.Operations.Add(new KnowledgeNetwork.Domains.Code.Models.ControlFlow.CSharpOperationInfo
+        {
+            OperationKind = "BinaryOperator",
+            Syntax = "x > 0",
+            Summary = "x > 0"
+        });
+
+        // Set up relationships
+        entryBlock.Successors.Add(1);
+        conditionalBlock.Predecessors.Add(0);
+        conditionalBlock.Successors.Add(2);
+        exitBlock.Predecessors.Add(1);
+
+        cfg.BasicBlocks.Add(entryBlock);
+        cfg.BasicBlocks.Add(conditionalBlock);
+        cfg.BasicBlocks.Add(exitBlock);
+        cfg.EntryBlock = entryBlock;
+        cfg.ExitBlock = exitBlock;
+
+        // Create edges
+        var edge1 = new KnowledgeNetwork.Domains.Code.Models.CSharpControlFlowEdge
+        {
+            Source = 0,
+            Target = 1,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpEdgeKind.Regular,
+            Label = "entry"
+        };
+
+        var edge2 = new KnowledgeNetwork.Domains.Code.Models.CSharpControlFlowEdge
+        {
+            Source = 1,
+            Target = 2,
+            Kind = KnowledgeNetwork.Domains.Code.Models.Enums.CSharpEdgeKind.ConditionalTrue,
+            Label = "condition",
+            Condition = new KnowledgeNetwork.Domains.Code.Models.ControlFlow.CSharpEdgeCondition
+            {
+                BooleanValue = true,
+                Description = "x > 0"
+            }
+        };
+
+        cfg.Edges.Add(edge1);
+        cfg.Edges.Add(edge2);
+
+        // Mock complexity metrics
+        cfg.Metrics = new KnowledgeNetwork.Domains.Code.Models.Common.CSharpComplexityMetrics
+        {
+            BlockCount = 3,
+            EdgeCount = 2,
+            CyclomaticComplexity = 2,
+            DecisionPoints = 1,
+            LoopCount = 0,
+            HasExceptionHandling = false
+        };
+
+        return cfg;
+    }
     #endregion
 }
