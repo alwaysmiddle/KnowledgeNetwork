@@ -279,9 +279,9 @@ public class CSharpControlFlowAnalyzer
             }
 
             // Add conditional successor
-            if (roslynBlock.ConditionalSuccessor != null && blockMap.ContainsKey(roslynBlock.ConditionalSuccessor))
+            if (roslynBlock.ConditionalSuccessor != null && roslynBlock.ConditionalSuccessor.Destination != null && blockMap.ContainsKey(roslynBlock.ConditionalSuccessor.Destination))
             {
-                var targetBlock = blockMap[roslynBlock.ConditionalSuccessor];
+                var targetBlock = blockMap[roslynBlock.ConditionalSuccessor.Destination];
                 var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
                 edge.Kind = CSharpEdgeKind.ConditionalTrue;
                 edge.Label = "condition";
