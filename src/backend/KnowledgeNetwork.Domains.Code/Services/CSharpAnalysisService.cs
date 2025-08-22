@@ -1,10 +1,14 @@
+using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.Extensions.Logging;
 using KnowledgeNetwork.Core.Models.Core;
 using KnowledgeNetwork.Core.Models.Constants;
+using KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
 using KnowledgeNetwork.Domains.Code.Models;
 using KnowledgeNetwork.Domains.Code.Models.Analysis;
+using KnowledgeNetwork.Domains.Code.Models.Blocks;
 using KnowledgeNetwork.Domains.Code.Converters;
 
 namespace KnowledgeNetwork.Domains.Code.Services;
@@ -15,8 +19,22 @@ namespace KnowledgeNetwork.Domains.Code.Services;
 /// </summary>
 public class CSharpAnalysisService
 {
-    private readonly CSharpControlFlowAnalyzer _controlFlowAnalyzer = new();
+    private readonly CSharpMethodBlockAnalyzer _methodBlockAnalyzer;
     private readonly CfgToKnowledgeNodeConverter _cfgConverter = new();
+    private readonly ILogger<CSharpAnalysisService> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the CSharpAnalysisService
+    /// </summary>
+    /// <param name="methodBlockAnalyzer">Analyzer for method-level block extraction</param>
+    /// <param name="logger">Logger instance</param>
+    public CSharpAnalysisService(
+        CSharpMethodBlockAnalyzer methodBlockAnalyzer,
+        ILogger<CSharpAnalysisService> logger)
+    {
+        _methodBlockAnalyzer = methodBlockAnalyzer ?? throw new ArgumentNullException(nameof(methodBlockAnalyzer));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
     /// <summary>
     /// Language identifier for this service
@@ -100,7 +118,7 @@ public class CSharpAnalysisService
     /// </summary>
     /// <param name="code">C# source code to analyze</param>
     /// <returns>List of control flow graphs for all methods</returns>
-    public async Task<List<CSharpControlFlowGraph>> ExtractControlFlowAsync(string code)
+    public async Task<List<MethodBlockGraph>> ExtractControlFlowAsync(string code)
     {
         try
         {
@@ -111,14 +129,13 @@ public class CSharpAnalysisService
             var compilation = CreateCompilation(syntaxTree);
 
             // Extract CFGs for all methods
-            var cfgs = await _controlFlowAnalyzer.ExtractAllControlFlowsAsync(compilation, syntaxTree);
+            var cfgs = await _methodBlockAnalyzer.ExtractAllControlFlowsAsync(compilation, syntaxTree);
 
             return cfgs;
         }
         catch (Exception ex)
         {
-            // Log error but return empty list
-            // System.Diagnostics.Debug.WriteLine($"CFG extraction failed: {ex.Message}");
+            _logger.LogError(ex, "CFG extraction failed");
             return [];
         }
     }
@@ -203,7 +220,7 @@ public class CSharpAnalysisService
         }
         catch (Exception ex)
         {
-            // Log error and return null
+            _logger.LogError(ex, "Failed to find method node for {MethodName}", methodName);
             return null;
         }
     }
@@ -329,9 +346,9 @@ public class CSharpAnalysisService
     /// </summary>
     /// <param name="code">C# source code (used for basic analysis)</param>
     /// <returns>Simple mock CFG with basic blocks and edges</returns>
-    private CSharpControlFlowGraph CreateSimpleMockCfg(string code)
+    private MethodBlockGraph CreateSimpleMockCfg(string code)
     {
-        var cfg = new CSharpControlFlowGraph
+        var cfg = new MethodBlockGraph
         {
             MethodName = "MockMethod",
             TypeName = "MockClass",

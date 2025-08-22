@@ -1,6 +1,7 @@
 using KnowledgeNetwork.Core.Models.Core;
 using KnowledgeNetwork.Core.Models.Constants;
 using KnowledgeNetwork.Domains.Code.Models;
+using KnowledgeNetwork.Domains.Code.Models.Blocks;
 using KnowledgeNetwork.Domains.Code.Models.Enums;
 using KnowledgeNetwork.Domains.Code.Models.ControlFlow;
 
@@ -16,7 +17,7 @@ public class CfgToKnowledgeNodeConverter
     /// </summary>
     /// <param name="cfg">Control Flow Graph to convert</param>
     /// <returns>Method node containing all basic blocks and relationships</returns>
-    public KnowledgeNode ConvertCfgToKnowledgeNode(CSharpControlFlowGraph cfg)
+    public KnowledgeNode ConvertCfgToKnowledgeNode(MethodBlockGraph cfg)
     {
         var methodId = $"method-{cfg.TypeName}-{cfg.MethodName}";
 
@@ -106,7 +107,7 @@ public class CfgToKnowledgeNodeConverter
     /// <param name="cfg">Control Flow Graph to convert</param>
     /// <param name="includeOperations">Whether to include operation nodes within basic blocks</param>
     /// <returns>Result containing both nodes and edges</returns>
-    public CfgConversionResult ConvertCfgToGraph(CSharpControlFlowGraph cfg, bool includeOperations = true)
+    public CfgConversionResult ConvertCfgToGraph(MethodBlockGraph cfg, bool includeOperations = true)
     {
         var result = new CfgConversionResult();
         var methodId = $"method-{cfg.TypeName}-{cfg.MethodName}";
@@ -211,7 +212,7 @@ public class CfgToKnowledgeNodeConverter
     /// <param name="cfg">Control Flow Graph to convert</param>
     /// <param name="includeOperations">Whether to include operation nodes</param>
     /// <returns>List of all nodes in the CFG</returns>
-    public List<KnowledgeNode> ConvertCfgToAllNodes(CSharpControlFlowGraph cfg, bool includeOperations = true)
+    public List<KnowledgeNode> ConvertCfgToAllNodes(MethodBlockGraph cfg, bool includeOperations = true)
     {
         var nodes = new List<KnowledgeNode>();
         var methodId = $"method-{cfg.TypeName}-{cfg.MethodName}";
@@ -449,7 +450,7 @@ public class CfgToKnowledgeNodeConverter
         };
     }
 
-    private string GetMethodCustomType(CSharpControlFlowGraph cfg)
+    private string GetMethodCustomType(MethodBlockGraph cfg)
     {
         if (cfg.Metrics.LoopCount > 0 && cfg.Metrics.DecisionPoints > 2)
             return "complex-method";

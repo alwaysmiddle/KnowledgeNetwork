@@ -1,12 +1,13 @@
 using KnowledgeNetwork.Domains.Code.Models.Common;
 using KnowledgeNetwork.Domains.Code.Models.Enums;
 
-namespace KnowledgeNetwork.Domains.Code.Models;
+namespace KnowledgeNetwork.Domains.Code.Models.Blocks;
 
 /// <summary>
-/// Represents a complete control flow graph for a method or code block
+/// Represents a basic block-level control flow graph for a single C# method.
+/// This graph contains the basic blocks (atomic execution units) and the control flow edges between them.
 /// </summary>
-public class CSharpControlFlowGraph
+public class MethodBlockGraph
 {
     /// <summary>
     /// Unique identifier for this CFG
