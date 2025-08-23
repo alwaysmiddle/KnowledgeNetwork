@@ -1,6 +1,7 @@
-import { useState } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import clsx from 'clsx';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { toggleFolder } from '../store/fileSystemSlice';
 import { type FileNode } from '../types/fileSystem';
 import { FileIcon } from './FileIcon';
 
@@ -17,7 +18,11 @@ export function FileTreeNode({
   selectedFileId,
   onFileSelect 
 }: FileTreeNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(true); // Default expanded
+  const dispatch = useAppDispatch();
+  const expandedFolders = useAppSelector((state) => state.fileSystem.expandedFolders);
+  
+  // Check if folder is expanded (default to true for initial state)
+  const isExpanded = expandedFolders[node.id] !== undefined ? expandedFolders[node.id] : true;
   const indentWidth = depth * 8; // 8px per level (VS Code-style)
   const isSelected = selectedFileId === node.id;
 
@@ -25,7 +30,7 @@ export function FileTreeNode({
     if (node.type === 'folder' && node.children && node.children.length > 0) {
       // Folder: toggle expand/collapse
       e.stopPropagation();
-      setIsExpanded(!isExpanded);
+      dispatch(toggleFolder(node.id));
     } else if (node.type === 'file' && onFileSelect) {
       // File: select the file
       e.stopPropagation();

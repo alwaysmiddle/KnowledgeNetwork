@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { selectFile, initializeFolders } from '../store/fileSystemSlice';
 import { type FileNode } from '../types/fileSystem';
 import { FileTreeNode } from './FileTreeNode';
 
@@ -7,10 +9,30 @@ interface FileTreeProps {
 }
 
 export function FileTree({ data }: FileTreeProps) {
-  const [selectedFileId, setSelectedFileId] = useState<string | undefined>();
+  const dispatch = useAppDispatch();
+  const selectedFileId = useAppSelector((state) => state.fileSystem.selectedFileId);
+
+  // Initialize all folders to be expanded by default
+  useEffect(() => {
+    const collectFolderIds = (node: FileNode): string[] => {
+      const ids: string[] = [];
+      if (node.type === 'folder') {
+        ids.push(node.id);
+        if (node.children) {
+          node.children.forEach(child => {
+            ids.push(...collectFolderIds(child));
+          });
+        }
+      }
+      return ids;
+    };
+
+    const folderIds = collectFolderIds(data);
+    dispatch(initializeFolders(folderIds));
+  }, [data, dispatch]);
 
   const handleFileSelect = (node: FileNode) => {
-    setSelectedFileId(node.id);
+    dispatch(selectFile(node.id));
     console.log('Selected file:', node.name, 'ID:', node.id);
   };
 
