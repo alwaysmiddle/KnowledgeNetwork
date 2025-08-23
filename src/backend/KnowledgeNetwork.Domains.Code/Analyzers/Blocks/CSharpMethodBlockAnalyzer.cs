@@ -1,27 +1,41 @@
+using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.Operations;
+using Microsoft.Extensions.Logging;
 using KnowledgeNetwork.Domains.Code.Models;
+using KnowledgeNetwork.Domains.Code.Models.Blocks;
 using KnowledgeNetwork.Domains.Code.Models.Common;
 using KnowledgeNetwork.Domains.Code.Models.ControlFlow;
 using KnowledgeNetwork.Domains.Code.Models.Enums;
 
-namespace KnowledgeNetwork.Domains.Code.Services;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
 
 /// <summary>
-/// Service for extracting control flow graphs from C# code using Roslyn
+/// Analyzer for extracting basic block-level control flow graphs from individual C# methods.
+/// This analyzer takes a single method and produces a graph of basic blocks with control flow edges.
 /// </summary>
-public class CSharpControlFlowAnalyzer
+public class CSharpMethodBlockAnalyzer
 {
+    private readonly ILogger<CSharpMethodBlockAnalyzer> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the CSharpMethodBlockAnalyzer
+    /// </summary>
+    /// <param name="logger">Logger instance for diagnostic output</param>
+    public CSharpMethodBlockAnalyzer(ILogger<CSharpMethodBlockAnalyzer> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
     /// <summary>
     /// Extract control flow graph from a method body
     /// </summary>
     /// <param name="compilation">Compilation context</param>
     /// <param name="methodDeclaration">Method syntax node</param>
     /// <returns>Control flow graph or null if extraction fails</returns>
-    public async Task<CSharpControlFlowGraph?> ExtractControlFlowAsync(
+    public async Task<MethodBlockGraph?> ExtractControlFlowAsync(
         Compilation compilation,
         MethodDeclarationSyntax methodDeclaration)
     {
@@ -36,28 +50,27 @@ public class CSharpControlFlowAnalyzer
             var methodSymbol = semanticModel.GetDeclaredSymbol(methodDeclaration);
             if (methodSymbol == null)
             {
-                // Console.WriteLine($"CFG extraction: Failed to get method symbol for {methodDeclaration.Identifier}");
+                _logger.LogWarning("Failed to get method symbol for {MethodName}", methodDeclaration.Identifier);
                 return null;
             }
 
-            // Console.WriteLine($"CFG extraction: Processing method {methodDeclaration.Identifier}");
+            _logger.LogDebug("Processing method {MethodName} for CFG extraction", methodDeclaration.Identifier);
             // Get the method body operation
             var bodyNode = methodDeclaration.Body ?? (SyntaxNode?)methodDeclaration.ExpressionBody;
             if (bodyNode == null)
             {
-                // Console.WriteLine($"CFG extraction: Method {methodDeclaration.Identifier} has no body");
+                _logger.LogDebug("Method {MethodName} has no body, skipping CFG extraction", methodDeclaration.Identifier);
                 return null;
             }
 
-            // Console.WriteLine($"CFG extraction: Getting operation for method {methodDeclaration.Identifier}");
             var operation = semanticModel.GetOperation(bodyNode);
             if (operation == null)
             {
-                // Console.WriteLine($"CFG extraction: Failed to get operation for method {methodDeclaration.Identifier}");
+                _logger.LogWarning("Failed to get operation for method {MethodName}", methodDeclaration.Identifier);
                 return null;
             }
 
-            // Console.WriteLine($"CFG extraction: Got operation type {operation.GetType().Name} for method {methodDeclaration.Identifier}");
+            _logger.LogDebug("Got operation type {OperationType} for method {MethodName}", operation.GetType().Name, methodDeclaration.Identifier);
             // ControlFlowGraph.Create requires IBlockOperation specifically
             var blockOperation = operation switch
             {
@@ -68,21 +81,20 @@ public class CSharpControlFlowAnalyzer
 
             if (blockOperation == null)
             {
-                // System.Diagnostics.Debug.WriteLine($"CFG extraction: No valid block operation found for method {methodDeclaration.Identifier}");
+                _logger.LogWarning("No valid block operation found for method {MethodName}", methodDeclaration.Identifier);
                 return null;
             }
 
             // Create the control flow graph using Roslyn
             var cfg = ControlFlowGraph.Create(blockOperation);
-            // System.Diagnostics.Debug.WriteLine($"CFG extraction: Successfully created CFG with {cfg.Blocks.Length} blocks for method {methodDeclaration.Identifier}");
+            _logger.LogDebug("Successfully created CFG with {BlockCount} blocks for method {MethodName}", cfg.Blocks.Length, methodDeclaration.Identifier);
 
             // Convert to our domain model
             return ConvertToDomainModel(cfg, methodDeclaration, methodSymbol);
         }
         catch (Exception ex)
         {
-            // Log error but don't throw - return null to indicate failure
-            // System.Diagnostics.Debug.WriteLine($"CFG extraction failed for method {methodDeclaration.Identifier}: {ex.Message}");
+            _logger.LogError(ex, "CFG extraction failed for method {MethodName}", methodDeclaration.Identifier);
             return null;
         }
     }
@@ -93,15 +105,15 @@ public class CSharpControlFlowAnalyzer
     /// <param name="compilation">Compilation context</param>
     /// <param name="syntaxTree">Syntax tree to analyze</param>
     /// <returns>List of control flow graphs</returns>
-    public async Task<List<CSharpControlFlowGraph>> ExtractAllControlFlowsAsync(
+    public async Task<List<MethodBlockGraph>> ExtractAllControlFlowsAsync(
         Compilation compilation,
         SyntaxTree syntaxTree)
     {
-        var cfgs = new List<CSharpControlFlowGraph>();
+        var cfgs = new List<MethodBlockGraph>();
 
         try
         {
-            // Console.WriteLine("CFG extraction: Starting extraction for syntax tree");
+            _logger.LogDebug("Starting CFG extraction for syntax tree");
             var root = await syntaxTree.GetRootAsync();
 
             // Find all method declarations
@@ -109,7 +121,8 @@ public class CSharpControlFlowAnalyzer
                 .OfType<MethodDeclarationSyntax>()
                 .Where(m => m.Body != null || m.ExpressionBody != null);
 
-            // Console.WriteLine($"CFG extraction: Found {methods.Count()} methods to analyze");
+            var methodCount = methods.Count();
+            _logger.LogDebug("Found {MethodCount} methods to analyze", methodCount);
 
             // Extract CFG for each method
             foreach (var method in methods)
@@ -139,7 +152,7 @@ public class CSharpControlFlowAnalyzer
         }
         catch (Exception ex)
         {
-            // System.Diagnostics.Debug.WriteLine($"CFG extraction failed for syntax tree: {ex.Message}");
+            _logger.LogError(ex, "CFG extraction failed for syntax tree, returning partial results");
             return cfgs; // Return partial results
         }
     }
@@ -149,7 +162,7 @@ public class CSharpControlFlowAnalyzer
     /// <summary>
     /// Extract CFG from constructor declaration
     /// </summary>
-    private async Task<CSharpControlFlowGraph?> ExtractControlFlowFromConstructorAsync(
+    private async Task<MethodBlockGraph?> ExtractControlFlowFromConstructorAsync(
         Compilation compilation,
         ConstructorDeclarationSyntax constructorDeclaration)
     {
@@ -161,21 +174,21 @@ public class CSharpControlFlowAnalyzer
             var constructorSymbol = semanticModel.GetDeclaredSymbol(constructorDeclaration);
             if (constructorSymbol == null)
             {
-                // System.Diagnostics.Debug.WriteLine($"CFG extraction: Failed to get constructor symbol");
+                _logger.LogWarning("Failed to get constructor symbol");
                 return null;
             }
 
             var bodyNode = constructorDeclaration.Body ?? (SyntaxNode?)constructorDeclaration.ExpressionBody;
             if (bodyNode == null)
             {
-                // System.Diagnostics.Debug.WriteLine($"CFG extraction: Constructor has no body");
+                _logger.LogDebug("Constructor has no body, skipping CFG extraction");
                 return null;
             }
 
             var operation = semanticModel.GetOperation(bodyNode);
             if (operation == null)
             {
-                // System.Diagnostics.Debug.WriteLine($"CFG extraction: Failed to get operation for constructor");
+                _logger.LogWarning("Failed to get operation for constructor");
                 return null;
             }
 
@@ -189,12 +202,12 @@ public class CSharpControlFlowAnalyzer
 
             if (blockOperation == null)
             {
-                // System.Diagnostics.Debug.WriteLine($"CFG extraction: No valid block operation found for constructor");
+                _logger.LogWarning("No valid block operation found for constructor");
                 return null;
             }
 
             var cfg = ControlFlowGraph.Create(blockOperation);
-            // System.Diagnostics.Debug.WriteLine($"CFG extraction: Successfully created CFG with {cfg.Blocks.Length} blocks for constructor");
+            _logger.LogDebug("Successfully created CFG with {BlockCount} blocks for constructor", cfg.Blocks.Length);
 
             // Convert to our domain model
             var result = ConvertToDomainModel(cfg, constructorDeclaration, constructorSymbol);
@@ -208,18 +221,17 @@ public class CSharpControlFlowAnalyzer
         }
         catch (Exception ex)
         {
-            // System.Diagnostics.Debug.WriteLine($"CFG extraction failed for constructor: {ex.Message}");
+            _logger.LogError(ex, "CFG extraction failed for constructor");
             return null;
         }
     }
-
     /// <summary>
     /// Convert Roslyn ControlFlowGraph to our domain model
     /// </summary>
-    private CSharpControlFlowGraph ConvertToDomainModel(ControlFlowGraph cfg, SyntaxNode syntaxNode,
+    private MethodBlockGraph ConvertToDomainModel(ControlFlowGraph cfg, SyntaxNode syntaxNode,
         ISymbol methodSymbol)
     {
-        var domainCfg = new CSharpControlFlowGraph
+        var domainCfg = new MethodBlockGraph
         {
             MethodName = GetMethodName(methodSymbol),
             TypeName = methodSymbol.ContainingType?.ToDisplayString() ?? "",
@@ -237,38 +249,69 @@ public class CSharpControlFlowAnalyzer
             blockMap[block] = domainBlock;
         }
 
-        // Identify entry and exit blocks - simplified approach
+        // Identify entry and exit blocks using Roslyn's structure
         if (cfg.Blocks.Length > 0)
         {
-            var firstBlock = blockMap[cfg.Blocks[0]];
-            firstBlock.Kind = CSharpBasicBlockKind.Entry;
-            domainCfg.EntryBlock = firstBlock;
+            // Use the first block as entry (Roslyn guarantees this)
+            var entryBlock = blockMap[cfg.Blocks[0]];
+            entryBlock.Kind = CSharpBasicBlockKind.Entry;
+            domainCfg.EntryBlock = entryBlock;
 
-            if (cfg.Blocks.Length > 1)
+            // Find exit blocks (blocks with no successors or special exit blocks)
+            foreach (var kvp in blockMap)
             {
-                var lastBlock = blockMap[cfg.Blocks[cfg.Blocks.Length - 1]];
-                lastBlock.Kind = CSharpBasicBlockKind.Exit;
-                domainCfg.ExitBlock = lastBlock;
-            }
-            else
-            {
-                // Single block method - it's both entry and exit
-                firstBlock.Kind = CSharpBasicBlockKind.Entry;
-                domainCfg.ExitBlock = firstBlock;
+                var roslynBlock = kvp.Key;
+                var domainBlock = kvp.Value;
+
+                // Check if this is an exit block (no successors)
+                if (roslynBlock.ConditionalSuccessor == null && roslynBlock.FallThroughSuccessor == null)
+                {
+                    domainBlock.Kind = CSharpBasicBlockKind.Exit;
+                    domainCfg.ExitBlock = domainBlock; // Use the last one found
+                }
             }
         }
 
-        // Create simple sequential edges for now
-        for (int i = 0; i < cfg.Blocks.Length - 1; i++)
+        // Create edges based on actual Roslyn CFG structure
+        foreach (var kvp in blockMap)
         {
-            var sourceBlock = blockMap[cfg.Blocks[i]];
-            var targetBlock = blockMap[cfg.Blocks[i + 1]];
+            var roslynBlock = kvp.Key;
+            var sourceBlock = kvp.Value;
 
-            var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
-            domainCfg.Edges.Add(edge);
+            // Add fall-through successor
+            if (roslynBlock.FallThroughSuccessor != null && roslynBlock.FallThroughSuccessor.Destination != null && blockMap.ContainsKey(roslynBlock.FallThroughSuccessor.Destination))
+            {
+                var targetBlock = blockMap[roslynBlock.FallThroughSuccessor.Destination];
+                var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
+                edge.Kind = CSharpEdgeKind.Regular;
+                edge.Label = "fallthrough";
 
-            sourceBlock.Successors.Add(targetBlock.Id);
-            targetBlock.Predecessors.Add(sourceBlock.Id);
+                domainCfg.Edges.Add(edge);
+                sourceBlock.Successors.Add(targetBlock.Id);
+                targetBlock.Predecessors.Add(sourceBlock.Id);
+            }
+
+            // Add conditional successor
+            if (roslynBlock.ConditionalSuccessor != null && roslynBlock.ConditionalSuccessor.Destination != null && blockMap.ContainsKey(roslynBlock.ConditionalSuccessor.Destination))
+            {
+                var targetBlock = blockMap[roslynBlock.ConditionalSuccessor.Destination];
+                var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
+                edge.Kind = CSharpEdgeKind.ConditionalTrue;
+                edge.Label = "condition";
+
+                if (sourceBlock.BranchInfo != null)
+                {
+                    edge.Condition = new CSharpEdgeCondition
+                    {
+                        BooleanValue = true,
+                        Description = sourceBlock.BranchInfo.Condition
+                    };
+                }
+
+                domainCfg.Edges.Add(edge);
+                sourceBlock.Successors.Add(targetBlock.Id);
+                targetBlock.Predecessors.Add(sourceBlock.Id);
+            }
         }
 
         // Calculate reachability
@@ -279,7 +322,6 @@ public class CSharpControlFlowAnalyzer
 
         return domainCfg;
     }
-
     /// <summary>
     /// Convert Roslyn BasicBlock to our domain model
     /// </summary>
@@ -389,7 +431,7 @@ public class CSharpControlFlowAnalyzer
     /// <summary>
     /// Calculate reachability from entry block
     /// </summary>
-    private void CalculateReachability(CSharpControlFlowGraph cfg)
+    private void CalculateReachability(MethodBlockGraph cfg)
     {
         if (cfg.EntryBlock == null) return;
 
@@ -422,7 +464,7 @@ public class CSharpControlFlowAnalyzer
     /// <summary>
     /// Calculate complexity metrics for the CFG
     /// </summary>
-    private CSharpComplexityMetrics CalculateComplexityMetrics(CSharpControlFlowGraph cfg)
+    private CSharpComplexityMetrics CalculateComplexityMetrics(MethodBlockGraph cfg)
     {
         var metrics = new CSharpComplexityMetrics
         {
@@ -452,7 +494,7 @@ public class CSharpControlFlowAnalyzer
 
     #region Helper Methods for Operation Analysis
 
-    private string GetMethodName(ISymbol methodSymbol) => 
+    private string GetMethodName(ISymbol methodSymbol) =>
         methodSymbol.ToDisplayString(SymbolDisplayFormat.CSharpShortErrorMessageFormat);
 
     private CSharpLocationInfo CreateLocationInfo(SyntaxNode node)
@@ -486,32 +528,32 @@ public class CSharpControlFlowAnalyzer
         _ => false
     };
 
-    private string GetLeftSide(IOperation operation) => 
+    private string GetLeftSide(IOperation operation) =>
         operation is ISimpleAssignmentOperation assignment ? assignment.Target?.Syntax?.ToString() ?? "" : "";
 
-    private string GetRightSide(IOperation operation) => 
+    private string GetRightSide(IOperation operation) =>
         operation is ISimpleAssignmentOperation assignment ? assignment.Value?.Syntax?.ToString() ?? "" : "";
 
-    private string GetVariableName(IOperation operation) => 
+    private string GetVariableName(IOperation operation) =>
         operation is IVariableDeclaratorOperation declarator ? declarator.Symbol?.Name ?? "" : "";
 
-    private string GetInvocationSummary(IOperation operation) => 
-        operation is IInvocationOperation invocation ? 
-            $"{invocation.TargetMethod?.Name ?? "unknown"}({new string(',', Math.Max(0, invocation.Arguments.Length - 1))})" : 
+    private string GetInvocationSummary(IOperation operation) =>
+        operation is IInvocationOperation invocation ?
+            $"{invocation.TargetMethod?.Name ?? "unknown"}({new string(',', Math.Max(0, invocation.Arguments.Length - 1))})" :
             "method call";
 
-    private string GetReturnValue(IOperation operation) => 
+    private string GetReturnValue(IOperation operation) =>
         operation is IReturnOperation returnOp ? returnOp.ReturnedValue?.Syntax?.ToString() ?? "" : "";
 
-    private string GetConditionalExpression(IOperation operation) => 
+    private string GetConditionalExpression(IOperation operation) =>
         operation is IConditionalOperation conditional ? conditional.Condition?.Syntax?.ToString() ?? "" : "";
 
-    private string GetBinaryOperatorSummary(IOperation operation) => 
-        operation is IBinaryOperation binary ? 
-            $"{binary.LeftOperand?.Syntax?.ToString() ?? ""} {binary.OperatorKind} {binary.RightOperand?.Syntax?.ToString() ?? ""}" : 
+    private string GetBinaryOperatorSummary(IOperation operation) =>
+        operation is IBinaryOperation binary ?
+            $"{binary.LeftOperand?.Syntax?.ToString() ?? ""} {binary.OperatorKind} {binary.RightOperand?.Syntax?.ToString() ?? ""}" :
             "";
 
-    private string GetLoopSummary(IOperation operation) => 
+    private string GetLoopSummary(IOperation operation) =>
         operation is ILoopOperation loop ? loop.LoopKind switch
         {
             LoopKind.For => "for loop",

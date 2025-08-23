@@ -4,7 +4,7 @@
 
 ### Documentation
 - [React Flow Documentation](https://reactflow.dev/docs)
-- [Tauri Documentation](https://tauri.app/v1/guides/)
+- [Electron Documentation](https://www.electronjs.org/docs/latest)
 - [.NET 8 Documentation](https://docs.microsoft.com/en-us/dotnet/)
 
 ### Architecture Patterns
