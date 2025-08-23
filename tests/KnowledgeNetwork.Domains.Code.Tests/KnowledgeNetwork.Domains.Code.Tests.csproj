@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- xUnit v3 (2025 release) -->
+    <PackageReference Include="xunit.v3" Version="3.0.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    
+    <!-- Assertions -->
+    <PackageReference Include="Shouldly" Version="4.2.1" />
+    
+    <!-- Test Data Generation -->
+    <PackageReference Include="Bogus" Version="35.6.1" />
+    
+    <!-- Mocking -->
+    <PackageReference Include="Moq" Version="4.20.69" />
+    
+    <!-- Test SDK -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    
+    <!-- Coverage (optional) -->
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference production project -->
+    <ProjectReference Include="..\..\src\backend\KnowledgeNetwork.Domains.Code\KnowledgeNetwork.Domains.Code.csproj" />
+    <!-- Also need Core for base models -->
+    <ProjectReference Include="..\..\src\backend\KnowledgeNetwork.Core\KnowledgeNetwork.Core.csproj" />
+  </ItemGroup>
+
+</Project>
