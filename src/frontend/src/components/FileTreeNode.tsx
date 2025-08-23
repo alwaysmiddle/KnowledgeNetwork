@@ -12,6 +12,20 @@ interface FileTreeNodeProps {
   onFileSelect?: (node: FileNode) => void;
 }
 
+// Helper function to highlight search text in file names
+function highlightSearchText(text: string, query: string) {
+  if (!query.trim()) return text;
+  
+  const parts = text.split(new RegExp(`(${query})`, 'gi'));
+  return parts.map((part, i) => 
+    part.toLowerCase() === query.toLowerCase() ? (
+      <mark key={i} className="bg-yellow-400 text-black px-1 rounded-sm">{part}</mark>
+    ) : (
+      part
+    )
+  );
+}
+
 export function FileTreeNode({ 
   node, 
   depth = 0, 
@@ -20,11 +34,29 @@ export function FileTreeNode({
 }: FileTreeNodeProps) {
   const dispatch = useAppDispatch();
   const expandedFolders = useAppSelector((state) => state.fileSystem.expandedFolders);
+  const searchQuery = useAppSelector((state) => state.fileSystem.searchQuery);
+  const searchResults = useAppSelector((state) => state.fileSystem.searchResults);
   
   // Check if folder is expanded (default to true for initial state)
   const isExpanded = expandedFolders[node.id] !== undefined ? expandedFolders[node.id] : true;
   const indentWidth = depth * 8; // 8px per level (VS Code-style)
   const isSelected = selectedFileId === node.id;
+  const isSearchMatch = searchResults.includes(node.id);
+  const hasSearchQuery = searchQuery.trim().length > 0;
+
+  // Helper function to check if node has child matches
+  const hasChildMatches = (checkNode: FileNode): boolean => {
+    if (!checkNode.children) return false;
+    
+    return checkNode.children.some(child => 
+      searchResults.includes(child.id) || hasChildMatches(child)
+    );
+  };
+
+  // Hide nodes that don't match search (and their parents don't contain matches)
+  const shouldShow = !hasSearchQuery || isSearchMatch || (node.children && hasChildMatches(node));
+
+  if (!shouldShow) return null;
 
   const handleClick = (e: React.MouseEvent) => {
     if (node.type === 'folder' && node.children && node.children.length > 0) {
@@ -47,8 +79,10 @@ export function FileTreeNode({
           {
             // Selected file gets blue background (VS Code style)
             "bg-blue-600/30 hover:bg-blue-600/40": isSelected && node.type === 'file',
+            // Search matches get yellow background
+            "bg-yellow-600/20 hover:bg-yellow-600/30": !isSelected && isSearchMatch && hasSearchQuery,
             // Folders and unselected files get hover effect
-            "hover:bg-gray-700": !isSelected || node.type === 'folder'
+            "hover:bg-gray-700": !isSelected && (!isSearchMatch || !hasSearchQuery)
           }
         )}
         style={{ paddingLeft: `${8 + indentWidth}px` }}
@@ -79,13 +113,14 @@ export function FileTreeNode({
           className={clsx(
             "truncate flex-1 min-w-0 transition-colors",
             {
-              "text-gray-300": !isSelected,
-              "text-white font-medium": isSelected && node.type === 'file'
+              "text-gray-300": !isSelected && (!isSearchMatch || !hasSearchQuery),
+              "text-white font-medium": isSelected && node.type === 'file',
+              "text-yellow-200 font-medium": !isSelected && isSearchMatch && hasSearchQuery
             }
           )}
           title={node.name}
         >
-          {node.name}
+          {hasSearchQuery ? highlightSearchText(node.name, searchQuery) : node.name}
         </span>
       </div>
 

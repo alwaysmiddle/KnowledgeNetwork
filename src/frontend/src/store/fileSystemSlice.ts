@@ -4,12 +4,16 @@ interface FileSystemState {
   selectedFileId: string | undefined;
   expandedFolders: Record<string, boolean>;
   codeViewerVisible: boolean;
+  searchQuery: string;
+  searchResults: string[]; // File IDs that match search
 }
 
 const initialState: FileSystemState = {
   selectedFileId: undefined,
   expandedFolders: {},
   codeViewerVisible: true, // Show code viewer by default
+  searchQuery: '',
+  searchResults: [],
 };
 
 const fileSystemSlice = createSlice({
@@ -42,6 +46,16 @@ const fileSystemSlice = createSlice({
     setCodeViewerVisible: (state, action: PayloadAction<boolean>) => {
       state.codeViewerVisible = action.payload;
     },
+    setSearchQuery: (state, action: PayloadAction<string>) => {
+      state.searchQuery = action.payload;
+    },
+    setSearchResults: (state, action: PayloadAction<string[]>) => {
+      state.searchResults = action.payload;
+    },
+    clearSearch: (state) => {
+      state.searchQuery = '';
+      state.searchResults = [];
+    },
     resetFileSystem: (state) => {
       state.selectedFileId = undefined;
       state.expandedFolders = {};
@@ -57,6 +71,9 @@ export const {
   initializeFolders,
   toggleCodeViewer,
   setCodeViewerVisible,
+  setSearchQuery,
+  setSearchResults,
+  clearSearch,
   resetFileSystem 
 } = fileSystemSlice.actions;
 
