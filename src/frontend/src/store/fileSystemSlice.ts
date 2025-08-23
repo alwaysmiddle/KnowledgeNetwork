@@ -3,11 +3,13 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 interface FileSystemState {
   selectedFileId: string | undefined;
   expandedFolders: Record<string, boolean>;
+  codeViewerVisible: boolean;
 }
 
 const initialState: FileSystemState = {
   selectedFileId: undefined,
   expandedFolders: {},
+  codeViewerVisible: true, // Show code viewer by default
 };
 
 const fileSystemSlice = createSlice({
@@ -34,6 +36,12 @@ const fileSystemSlice = createSlice({
         }
       });
     },
+    toggleCodeViewer: (state) => {
+      state.codeViewerVisible = !state.codeViewerVisible;
+    },
+    setCodeViewerVisible: (state, action: PayloadAction<boolean>) => {
+      state.codeViewerVisible = action.payload;
+    },
     resetFileSystem: (state) => {
       state.selectedFileId = undefined;
       state.expandedFolders = {};
@@ -47,6 +55,8 @@ export const {
   toggleFolder, 
   setFolderExpanded, 
   initializeFolders,
+  toggleCodeViewer,
+  setCodeViewerVisible,
   resetFileSystem 
 } = fileSystemSlice.actions;
 

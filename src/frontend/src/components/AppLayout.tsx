@@ -7,13 +7,17 @@ interface AppLayoutProps {
   sidebar?: ReactNode;
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  codeViewer?: ReactNode;
+  codeViewerVisible?: boolean;
 }
 
 export function AppLayout({ 
   children, 
   sidebar, 
   sidebarOpen = true, 
-  onToggleSidebar 
+  onToggleSidebar,
+  codeViewer,
+  codeViewerVisible = false
 }: AppLayoutProps) {
   return (
     <div className="flex h-screen bg-gray-900">
@@ -42,9 +46,22 @@ export function AppLayout({
           </div>
         )}
         
-        {/* Content Area */}
-        <div className="flex-1 overflow-auto">
-          {children}
+        {/* Content Area with Split View */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left content */}
+          <div className={clsx(
+            "transition-all duration-300 overflow-auto",
+            codeViewerVisible && codeViewer ? "flex-1" : "w-full"
+          )}>
+            {children}
+          </div>
+
+          {/* Code viewer (right panel) */}
+          {codeViewerVisible && codeViewer && (
+            <div className="w-1/2 border-l border-gray-700">
+              {codeViewer}
+            </div>
+          )}
         </div>
       </div>
     </div>
