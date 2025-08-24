@@ -2,7 +2,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 
 public interface ICSharpMethodBlockAnalyzer
 {

@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 
-namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 
 /// <summary>
 /// Service responsible for extracting IBlockOperation from Roslyn syntax nodes.

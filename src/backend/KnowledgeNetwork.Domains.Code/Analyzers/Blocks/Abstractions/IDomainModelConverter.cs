@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FlowAnalysis;
 
-namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 
 /// <summary>
 /// Service responsible for converting Roslyn ControlFlowGraph structures into 

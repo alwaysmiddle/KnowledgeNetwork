@@ -1,3 +1,4 @@
+using KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 using KnowledgeNetwork.Domains.Code.Models.Blocks;
 using KnowledgeNetwork.Domains.Code.Models;
 using KnowledgeNetwork.Domains.Code.Models.Common;

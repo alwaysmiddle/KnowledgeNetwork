@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.Operations;
 
-namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 
 /// <summary>
 /// Service responsible for building Roslyn ControlFlowGraph structures from IBlockOperation.

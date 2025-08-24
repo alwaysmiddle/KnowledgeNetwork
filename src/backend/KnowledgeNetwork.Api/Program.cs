@@ -1,5 +1,7 @@
 using KnowledgeNetwork.Domains.Code.Services;
 using KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
+using KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
+using ICSharpMethodBlockAnalyzer = KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions.ICSharpMethodBlockAnalyzer;
 
 var builder = WebApplication.CreateBuilder(args);
 
