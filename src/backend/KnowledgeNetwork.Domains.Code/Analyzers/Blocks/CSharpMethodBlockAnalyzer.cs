@@ -1,4 +1,3 @@
-using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -29,6 +28,7 @@ public class CSharpMethodBlockAnalyzer
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
+
     /// <summary>
     /// Extract control flow graph from a method body
     /// </summary>
@@ -59,7 +59,8 @@ public class CSharpMethodBlockAnalyzer
             var bodyNode = methodDeclaration.Body ?? (SyntaxNode?)methodDeclaration.ExpressionBody;
             if (bodyNode == null)
             {
-                _logger.LogDebug("Method {MethodName} has no body, skipping CFG extraction", methodDeclaration.Identifier);
+                _logger.LogDebug("Method {MethodName} has no body, skipping CFG extraction",
+                    methodDeclaration.Identifier);
                 return null;
             }
 
@@ -70,7 +71,8 @@ public class CSharpMethodBlockAnalyzer
                 return null;
             }
 
-            _logger.LogDebug("Got operation type {OperationType} for method {MethodName}", operation.GetType().Name, methodDeclaration.Identifier);
+            _logger.LogDebug("Got operation type {OperationType} for method {MethodName}", operation.GetType().Name,
+                methodDeclaration.Identifier);
             // ControlFlowGraph.Create requires IBlockOperation specifically
             var blockOperation = operation switch
             {
@@ -81,13 +83,15 @@ public class CSharpMethodBlockAnalyzer
 
             if (blockOperation == null)
             {
-                _logger.LogWarning("No valid block operation found for method {MethodName}", methodDeclaration.Identifier);
+                _logger.LogWarning("No valid block operation found for method {MethodName}",
+                    methodDeclaration.Identifier);
                 return null;
             }
 
             // Create the control flow graph using Roslyn
             var cfg = ControlFlowGraph.Create(blockOperation);
-            _logger.LogDebug("Successfully created CFG with {BlockCount} blocks for method {MethodName}", cfg.Blocks.Length, methodDeclaration.Identifier);
+            _logger.LogDebug("Successfully created CFG with {BlockCount} blocks for method {MethodName}",
+                cfg.Blocks.Length, methodDeclaration.Identifier);
 
             // Convert to our domain model
             return ConvertToDomainModel(cfg, methodDeclaration, methodSymbol);
@@ -225,6 +229,7 @@ public class CSharpMethodBlockAnalyzer
             return null;
         }
     }
+
     /// <summary>
     /// Convert Roslyn ControlFlowGraph to our domain model
     /// </summary>
@@ -279,7 +284,8 @@ public class CSharpMethodBlockAnalyzer
             var sourceBlock = kvp.Value;
 
             // Add fall-through successor
-            if (roslynBlock.FallThroughSuccessor != null && roslynBlock.FallThroughSuccessor.Destination != null && blockMap.ContainsKey(roslynBlock.FallThroughSuccessor.Destination))
+            if (roslynBlock.FallThroughSuccessor != null && roslynBlock.FallThroughSuccessor.Destination != null &&
+                blockMap.ContainsKey(roslynBlock.FallThroughSuccessor.Destination))
             {
                 var targetBlock = blockMap[roslynBlock.FallThroughSuccessor.Destination];
                 var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
@@ -292,7 +298,8 @@ public class CSharpMethodBlockAnalyzer
             }
 
             // Add conditional successor
-            if (roslynBlock.ConditionalSuccessor != null && roslynBlock.ConditionalSuccessor.Destination != null && blockMap.ContainsKey(roslynBlock.ConditionalSuccessor.Destination))
+            if (roslynBlock.ConditionalSuccessor != null && roslynBlock.ConditionalSuccessor.Destination != null &&
+                blockMap.ContainsKey(roslynBlock.ConditionalSuccessor.Destination))
             {
                 var targetBlock = blockMap[roslynBlock.ConditionalSuccessor.Destination];
                 var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
@@ -322,6 +329,7 @@ public class CSharpMethodBlockAnalyzer
 
         return domainCfg;
     }
+
     /// <summary>
     /// Convert Roslyn BasicBlock to our domain model
     /// </summary>
@@ -492,8 +500,6 @@ public class CSharpMethodBlockAnalyzer
 
     #endregion
 
-    #region Helper Methods for Operation Analysis
-
     private string GetMethodName(ISymbol methodSymbol) =>
         methodSymbol.ToDisplayString(SymbolDisplayFormat.CSharpShortErrorMessageFormat);
 
@@ -538,9 +544,9 @@ public class CSharpMethodBlockAnalyzer
         operation is IVariableDeclaratorOperation declarator ? declarator.Symbol?.Name ?? "" : "";
 
     private string GetInvocationSummary(IOperation operation) =>
-        operation is IInvocationOperation invocation ?
-            $"{invocation.TargetMethod?.Name ?? "unknown"}({new string(',', Math.Max(0, invocation.Arguments.Length - 1))})" :
-            "method call";
+        operation is IInvocationOperation invocation
+            ? $"{invocation.TargetMethod?.Name ?? "unknown"}({new string(',', Math.Max(0, invocation.Arguments.Length - 1))})"
+            : "method call";
 
     private string GetReturnValue(IOperation operation) =>
         operation is IReturnOperation returnOp ? returnOp.ReturnedValue?.Syntax?.ToString() ?? "" : "";
@@ -549,18 +555,18 @@ public class CSharpMethodBlockAnalyzer
         operation is IConditionalOperation conditional ? conditional.Condition?.Syntax?.ToString() ?? "" : "";
 
     private string GetBinaryOperatorSummary(IOperation operation) =>
-        operation is IBinaryOperation binary ?
-            $"{binary.LeftOperand?.Syntax?.ToString() ?? ""} {binary.OperatorKind} {binary.RightOperand?.Syntax?.ToString() ?? ""}" :
-            "";
+        operation is IBinaryOperation binary
+            ? $"{binary.LeftOperand?.Syntax?.ToString() ?? ""} {binary.OperatorKind} {binary.RightOperand?.Syntax?.ToString() ?? ""}"
+            : "";
 
     private string GetLoopSummary(IOperation operation) =>
-        operation is ILoopOperation loop ? loop.LoopKind switch
-        {
-            LoopKind.For => "for loop",
-            LoopKind.ForEach => "foreach loop",
-            LoopKind.While => "while loop",
-            _ => "loop"
-        } : "loop";
-
-    #endregion
+        operation is ILoopOperation loop
+            ? loop.LoopKind switch
+            {
+                LoopKind.For => "for loop",
+                LoopKind.ForEach => "foreach loop",
+                LoopKind.While => "while loop",
+                _ => "loop"
+            }
+            : "loop";
 }

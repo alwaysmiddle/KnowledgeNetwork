@@ -36,4 +36,11 @@
     <ProjectReference Include="..\..\backend\KnowledgeNetwork.Core\KnowledgeNetwork.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Include shared test utilities -->
+    <Compile Include="..\shared\CompilationFactory.cs" Link="Shared\CompilationFactory.cs" />
+    <Compile Include="..\shared\SampleCodeRepository.cs" Link="Shared\SampleCodeRepository.cs" />
+    <Compile Include="..\shared\AnalysisResultValidator.cs" Link="Shared\AnalysisResultValidator.cs" />
+  </ItemGroup>
+
 </Project>
