@@ -15,10 +15,9 @@ interface FileSystemState {
   codeViewerVisible: boolean;
   searchQuery: string;
   searchResults: string[]; // File IDs that match search
-  // Real file system data
+  // File system data
   rootDirectory: FileNode | null;
   watchingDirectory: string | null;
-  isUsingRealFileSystem: boolean;
   isLoading: boolean;
   error: string | null;
   // Visual feedback for file changes
@@ -33,10 +32,9 @@ const initialState: FileSystemState = {
   codeViewerVisible: true, // Show code viewer by default
   searchQuery: '',
   searchResults: [],
-  // Real file system data
+  // File system data
   rootDirectory: null,
   watchingDirectory: null,
-  isUsingRealFileSystem: false, // Start with mock data by default
   isLoading: false,
   error: null,
   // Visual feedback for file changes
@@ -96,7 +94,7 @@ const fileSystemSlice = createSlice({
         state.error = null;
       }
     },
-    setFileSystemError: (state, action: PayloadAction<string>) => {
+    setFileSystemError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
       state.isLoading = false;
     },
@@ -105,24 +103,8 @@ const fileSystemSlice = createSlice({
       state.isLoading = false;
       state.error = null;
     },
-    setWatchingDirectory: (state, action: PayloadAction<string>) => {
+    setWatchingDirectory: (state, action: PayloadAction<string | null>) => {
       state.watchingDirectory = action.payload;
-    },
-    toggleFileSystemMode: (state) => {
-      state.isUsingRealFileSystem = !state.isUsingRealFileSystem;
-      // Reset selection when switching modes
-      state.selectedFileId = undefined;
-      state.searchQuery = '';
-      state.searchResults = [];
-    },
-    setFileSystemMode: (state, action: PayloadAction<boolean>) => {
-      state.isUsingRealFileSystem = action.payload;
-      if (action.payload !== state.isUsingRealFileSystem) {
-        // Reset selection when switching modes
-        state.selectedFileId = undefined;
-        state.searchQuery = '';
-        state.searchResults = [];
-      }
     },
     // Real-time file system update actions with activity tracking
     addFileNode: (state, action: PayloadAction<{ parentPath: string; node: FileNode }>) => {
@@ -228,13 +210,11 @@ export const {
   setSearchResults,
   clearSearch,
   resetFileSystem,
-  // Real file system actions
+  // File system actions
   setLoadingFileSystem,
   setFileSystemError,
   setRootDirectory,
   setWatchingDirectory,
-  toggleFileSystemMode,
-  setFileSystemMode,
   addFileNode,
   removeFileNode,
   updateFileNode,
@@ -319,10 +299,8 @@ function addActivity(state: FileSystemState, activity: FileActivity): void {
 }
 
 // Selectors
-export const selectCurrentFileSystemData = (state: { fileSystem: FileSystemState }, mockData: FileNode) => {
-  return state.fileSystem.isUsingRealFileSystem 
-    ? state.fileSystem.rootDirectory 
-    : mockData;
+export const selectFileSystemData = (state: { fileSystem: FileSystemState }) => {
+  return state.fileSystem.rootDirectory;
 };
 
 export default fileSystemSlice.reducer;

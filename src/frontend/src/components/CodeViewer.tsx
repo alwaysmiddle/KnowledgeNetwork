@@ -1,10 +1,14 @@
+import { useState, useEffect } from 'react';
 import { useAppSelector } from '../store/hooks';
-import { getFileContent, getFileLanguage } from '../data/mockFileContents';
-import { mockFileSystem } from '../data/mockFileSystem';
+import { selectFileSystemData } from '../store/fileSystemSlice';
 import { type FileNode } from '../types/fileSystem';
 
 export function CodeViewer() {
   const selectedFileId = useAppSelector((state) => state.fileSystem.selectedFileId);
+  const fileSystemData = useAppSelector(selectFileSystemData);
+  const [fileContent, setFileContent] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Find the selected file node
   const findFileById = (node: FileNode, id: string): FileNode | null => {
@@ -18,7 +22,68 @@ export function CodeViewer() {
     return null;
   };
 
-  const selectedFile = selectedFileId ? findFileById(mockFileSystem, selectedFileId) : null;
+  const selectedFile = selectedFileId && fileSystemData ? findFileById(fileSystemData, selectedFileId) : null;
+
+  // Helper function to detect language for syntax highlighting
+  const getFileLanguage = (fileName: string): string => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    switch (extension) {
+      case 'cs': return 'csharp';
+      case 'tsx': case 'ts': return 'typescript';
+      case 'jsx': case 'js': return 'javascript';
+      case 'json': return 'json';
+      case 'css': return 'css';
+      case 'html': return 'html';
+      case 'md': return 'markdown';
+      default: return 'text';
+    }
+  };
+
+  // Load file content when selected file changes
+  useEffect(() => {
+    if (!selectedFile || selectedFile.type !== 'file') {
+      setFileContent('');
+      setError(null);
+      return;
+    }
+
+    const loadFileContent = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Check if Electron API is available
+        if (!window.electronAPI?.fileSystem?.readFile) {
+          setError('File reading not available - requires Electron context');
+          setLoading(false);
+          return;
+        }
+
+        // Read file content via Electron IPC
+        const result = await window.electronAPI.fileSystem.readFile(selectedFile.path);
+
+        if (result.error) {
+          setError(`Failed to load file: ${result.error}`);
+          setFileContent('');
+        } else if (result.success && result.content !== undefined) {
+          setFileContent(result.content);
+          setError(null);
+        } else {
+          setError('Unexpected response when loading file');
+          setFileContent('');
+        }
+      } catch (error) {
+        console.error('Error loading file content:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error loading file');
+        setFileContent('');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFileContent();
+  }, [selectedFile]);
 
   if (!selectedFile || selectedFile.type !== 'file') {
     return (
@@ -32,7 +97,6 @@ export function CodeViewer() {
     );
   }
 
-  const fileContent = getFileContent(selectedFile.id);
   const language = getFileLanguage(selectedFile.name);
 
   return (
@@ -44,14 +108,24 @@ export function CodeViewer() {
           <span className="text-xs text-gray-500 bg-gray-700 px-2 py-1 rounded">
             {language}
           </span>
+          {loading && (
+            <span className="text-xs text-blue-400">Loading...</span>
+          )}
         </div>
       </div>
 
       {/* Code Content */}
       <div className="flex-1 overflow-auto">
-        <pre className="text-sm text-gray-300 p-4 font-mono leading-relaxed">
-          <code>{fileContent}</code>
-        </pre>
+        {error ? (
+          <div className="p-4 text-red-400">
+            <p>Error loading file content:</p>
+            <p className="text-sm mt-1">{error}</p>
+          </div>
+        ) : (
+          <pre className="text-sm text-gray-300 p-4 font-mono leading-relaxed">
+            <code>{fileContent}</code>
+          </pre>
+        )}
       </div>
     </div>
   );
