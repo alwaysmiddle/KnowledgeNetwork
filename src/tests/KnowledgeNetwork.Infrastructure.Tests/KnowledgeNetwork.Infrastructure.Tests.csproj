@@ -31,9 +31,9 @@
 
   <ItemGroup>
     <!-- Reference production project -->
-    <ProjectReference Include="..\..\src\backend\KnowledgeNetwork.Domains.Code\KnowledgeNetwork.Domains.Code.csproj" />
+    <ProjectReference Include="..\..\backend\KnowledgeNetwork.Infrastructure\KnowledgeNetwork.Infrastructure.csproj" />
     <!-- Also need Core for base models -->
-    <ProjectReference Include="..\..\src\backend\KnowledgeNetwork.Core\KnowledgeNetwork.Core.csproj" />
+    <ProjectReference Include="..\..\backend\KnowledgeNetwork.Core\KnowledgeNetwork.Core.csproj" />
   </ItemGroup>
 
 </Project>

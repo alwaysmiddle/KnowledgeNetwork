@@ -1,4 +1,5 @@
 using KnowledgeNetwork.Domains.Code.Services;
+using KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Register our analysis services
+builder.Services.AddScoped<CSharpMethodBlockAnalyzer>();
 builder.Services.AddScoped<CSharpAnalysisService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

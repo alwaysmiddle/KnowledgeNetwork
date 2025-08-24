@@ -27,17 +27,13 @@
     
     <!-- Coverage (optional) -->
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
-    
-    <!-- API Testing -->
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Reference production project -->
-    <ProjectReference Include="..\..\src\backend\KnowledgeNetwork.Api\KnowledgeNetwork.Api.csproj" />
-    <!-- Also need Core and Domains for full API testing -->
-    <ProjectReference Include="..\..\src\backend\KnowledgeNetwork.Core\KnowledgeNetwork.Core.csproj" />
-    <ProjectReference Include="..\..\src\backend\KnowledgeNetwork.Domains.Code\KnowledgeNetwork.Domains.Code.csproj" />
+    <ProjectReference Include="..\..\backend\KnowledgeNetwork.Domains.Code\KnowledgeNetwork.Domains.Code.csproj" />
+    <!-- Also need Core for base models -->
+    <ProjectReference Include="..\..\backend\KnowledgeNetwork.Core\KnowledgeNetwork.Core.csproj" />
   </ItemGroup>
 
 </Project>
