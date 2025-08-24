@@ -13,6 +13,7 @@
     "@antv/g6": "^5.0.49",
     "@reduxjs/toolkit": "^2.8.2",
     "@tailwindcss/vite": "^4.1.12",
+    "chokidar": "^4.0.3",
     "clsx": "^2.1.1",
     "lucide-react": "^0.541.0",
     "react": "^19.1.1",
