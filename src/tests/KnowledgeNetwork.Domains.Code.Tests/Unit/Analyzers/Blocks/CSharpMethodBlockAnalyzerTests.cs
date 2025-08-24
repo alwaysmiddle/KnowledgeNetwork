@@ -15,8 +15,23 @@ public class CSharpMethodBlockAnalyzerTests
 
     public CSharpMethodBlockAnalyzerTests()
     {
-        ILogger<CSharpMethodBlockAnalyzer> logger = NullLogger<CSharpMethodBlockAnalyzer>.Instance;
-        _analyzer = new CSharpMethodBlockAnalyzer(logger);
+        // Create logger instances for all services
+        var operationExtractorLogger = NullLogger<RoslynOperationExtractor>.Instance;
+        var cfgBuilderLogger = NullLogger<CfgStructureBuilder>.Instance;
+        var domainConverterLogger = NullLogger<DomainModelConverter>.Instance;
+        var analyzerLogger = NullLogger<CSharpMethodBlockAnalyzer>.Instance;
+
+        // Create the composed services that the analyzer depends on
+        var operationExtractor = new RoslynOperationExtractor(operationExtractorLogger);
+        var cfgBuilder = new CfgStructureBuilder(cfgBuilderLogger);
+        var domainConverter = new DomainModelConverter(domainConverterLogger);
+
+        // Create the main analyzer with its dependencies
+        _analyzer = new CSharpMethodBlockAnalyzer(
+            operationExtractor,
+            cfgBuilder,
+            domainConverter,
+            analyzerLogger);
     }
     
     [Fact]
