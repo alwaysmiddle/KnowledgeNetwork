@@ -47,31 +47,24 @@ const electronAPI = {
     // Event listeners for file system changes
     onFileChange: (callback) => {
       const fileAddedListener = (_event, data) => {
-        console.log("🌉 IPC event received: fs:fileAdded", data);
         callback({ ...data, type: "add" });
       };
       const fileChangedListener = (_event, data) => {
-        console.log("🌉 IPC event received: fs:fileChanged", data);
         callback({ ...data, type: "change" });
       };
       const fileRemovedListener = (_event, data) => {
-        console.log("🌉 IPC event received: fs:fileRemoved", data);
         callback({ ...data, type: "unlink" });
       };
       const dirAddedListener = (_event, data) => {
-        console.log("🌉 IPC event received: fs:directoryAdded", data);
         callback({ ...data, type: "addDir" });
       };
       const dirRemovedListener = (_event, data) => {
-        console.log("🌉 IPC event received: fs:directoryRemoved", data);
         callback({ ...data, type: "unlinkDir" });
       };
       const errorListener = (_event, data) => {
-        console.log("🌉 IPC event received: fs:error", data);
         callback({ ...data, type: "error" });
       };
       const readyListener = (_event, data) => {
-        console.log("🌉 IPC event received: fs:ready", data);
         callback({ ...data, type: "ready" });
       };
       ipcRenderer.on("fs:fileAdded", fileAddedListener);
@@ -81,7 +74,6 @@ const electronAPI = {
       ipcRenderer.on("fs:directoryRemoved", dirRemovedListener);
       ipcRenderer.on("fs:error", errorListener);
       ipcRenderer.on("fs:ready", readyListener);
-      console.log("🌉 IPC event listeners registered for file system changes");
       return () => {
         ipcRenderer.removeListener("fs:fileAdded", fileAddedListener);
         ipcRenderer.removeListener("fs:fileChanged", fileChangedListener);
