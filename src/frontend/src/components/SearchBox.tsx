@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { setSearchQuery, setSearchResults, clearSearch } from '../store/fileSystemSlice';
-import { mockFileSystem } from '../data/mockFileSystem';
+import { setSearchQuery, setSearchResults, clearSearch, selectFileSystemData } from '../store/fileSystemSlice';
 import { type FileNode } from '../types/fileSystem';
 
 export function SearchBox() {
   const dispatch = useAppDispatch();
   const searchQuery = useAppSelector((state) => state.fileSystem.searchQuery);
   const searchResults = useAppSelector((state) => state.fileSystem.searchResults);
+  const fileSystemData = useAppSelector(selectFileSystemData);
   const [localQuery, setLocalQuery] = useState(searchQuery);
 
   // Search function
@@ -28,14 +28,14 @@ export function SearchBox() {
 
   // Update search results when query changes
   useEffect(() => {
-    if (localQuery.trim()) {
-      const results = searchFiles(localQuery.trim(), mockFileSystem);
+    if (localQuery.trim() && fileSystemData) {
+      const results = searchFiles(localQuery.trim(), fileSystemData);
       dispatch(setSearchResults(results));
       dispatch(setSearchQuery(localQuery));
     } else {
       dispatch(clearSearch());
     }
-  }, [localQuery, dispatch]);
+  }, [localQuery, fileSystemData, dispatch]);
 
   const handleClear = () => {
     setLocalQuery('');

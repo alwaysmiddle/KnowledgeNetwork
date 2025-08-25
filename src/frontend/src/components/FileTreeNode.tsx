@@ -36,6 +36,7 @@ export function FileTreeNode({
   const expandedFolders = useAppSelector((state) => state.fileSystem.expandedFolders);
   const searchQuery = useAppSelector((state) => state.fileSystem.searchQuery);
   const searchResults = useAppSelector((state) => state.fileSystem.searchResults);
+  const changedFiles = useAppSelector((state) => state.fileSystem.changedFiles);
   
   // Check if folder is expanded (default to true for initial state)
   const isExpanded = expandedFolders[node.id] !== undefined ? expandedFolders[node.id] : true;
@@ -43,6 +44,10 @@ export function FileTreeNode({
   const isSelected = selectedFileId === node.id;
   const isSearchMatch = searchResults.includes(node.id);
   const hasSearchQuery = searchQuery.trim().length > 0;
+  
+  // Check if this file has recent changes
+  const changeInfo = changedFiles[node.path];
+  const hasRecentChange = !!changeInfo;
 
   // Helper function to check if node has child matches
   const hasChildMatches = (checkNode: FileNode): boolean => {
@@ -81,8 +86,12 @@ export function FileTreeNode({
             "bg-blue-600/30 hover:bg-blue-600/40": isSelected && node.type === 'file',
             // Search matches get yellow background
             "bg-yellow-600/20 hover:bg-yellow-600/30": !isSelected && isSearchMatch && hasSearchQuery,
+            // Recent changes get special highlighting
+            "ring-1 ring-green-500/50 bg-green-900/10": hasRecentChange && changeInfo?.type === 'added',
+            "ring-1 ring-yellow-500/50 bg-yellow-900/10": hasRecentChange && changeInfo?.type === 'modified',
+            "ring-1 ring-red-500/50 bg-red-900/10": hasRecentChange && changeInfo?.type === 'removed',
             // Folders and unselected files get hover effect
-            "hover:bg-gray-700": !isSelected && (!isSearchMatch || !hasSearchQuery)
+            "hover:bg-gray-700": !isSelected && (!isSearchMatch || !hasSearchQuery) && !hasRecentChange
           }
         )}
         style={{ paddingLeft: `${8 + indentWidth}px` }}
@@ -113,15 +122,39 @@ export function FileTreeNode({
           className={clsx(
             "truncate flex-1 min-w-0 transition-colors",
             {
-              "text-gray-300": !isSelected && (!isSearchMatch || !hasSearchQuery),
+              "text-gray-300": !isSelected && (!isSearchMatch || !hasSearchQuery) && !hasRecentChange,
               "text-white font-medium": isSelected && node.type === 'file',
-              "text-yellow-200 font-medium": !isSelected && isSearchMatch && hasSearchQuery
+              "text-yellow-200 font-medium": !isSelected && isSearchMatch && hasSearchQuery,
+              "text-green-300": hasRecentChange && changeInfo?.type === 'added',
+              "text-yellow-300": hasRecentChange && changeInfo?.type === 'modified',
+              "text-red-300 line-through": hasRecentChange && changeInfo?.type === 'removed'
             }
           )}
-          title={node.name}
+          title={`${node.name}${hasRecentChange ? ` (${changeInfo?.type})` : ''}`}
         >
           {hasSearchQuery ? highlightSearchText(node.name, searchQuery) : node.name}
         </span>
+
+        {/* Change indicator badges */}
+        {hasRecentChange && (
+          <div className="flex items-center gap-1">
+            {changeInfo?.type === 'added' && (
+              <span className="px-1.5 py-0.5 bg-green-600 text-white text-xs rounded-full font-medium">
+                +
+              </span>
+            )}
+            {changeInfo?.type === 'modified' && (
+              <span className="px-1.5 py-0.5 bg-yellow-600 text-white text-xs rounded-full font-medium">
+                ~
+              </span>
+            )}
+            {changeInfo?.type === 'removed' && (
+              <span className="px-1.5 py-0.5 bg-red-600 text-white text-xs rounded-full font-medium">
+                ×
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Children (only if expanded) */}
