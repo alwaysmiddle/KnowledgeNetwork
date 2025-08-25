@@ -57,7 +57,6 @@ export function createFileSystemWatcher(
   dispatch: AppDispatch,
   _options?: FileSystemWatcherOptions
 ): IFileSystemWatcher {
-  
   if (!ElectronFileSystemWatcher.isElectronContext()) {
     throw new Error('File system watcher requires Electron context')
   }

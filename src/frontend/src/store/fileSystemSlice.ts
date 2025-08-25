@@ -118,7 +118,7 @@ const fileSystemSlice = createSlice({
           
           // Track activity
           addActivity(state, {
-            id: `add-${Date.now()}-${node.id}`,
+            id: `add-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${node.path}`,
             type: 'added',
             fileName: node.name,
             filePath: node.path,
@@ -141,7 +141,7 @@ const fileSystemSlice = createSlice({
         if (removedNode && removeNodeByPath(state.rootDirectory, filePath)) {
           // Track activity
           addActivity(state, {
-            id: `remove-${Date.now()}-${removedNode.id}`,
+            id: `remove-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${removedNode.path}`,
             type: 'removed',
             fileName: removedNode.name,
             filePath: removedNode.path,
@@ -162,7 +162,7 @@ const fileSystemSlice = createSlice({
         if (updateNodeByPath(state.rootDirectory, updatedNode)) {
           // Track activity
           addActivity(state, {
-            id: `update-${Date.now()}-${updatedNode.id}`,
+            id: `update-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${updatedNode.path}`,
             type: 'modified',
             fileName: updatedNode.name,
             filePath: updatedNode.path,
@@ -195,6 +195,12 @@ const fileSystemSlice = createSlice({
         }
       });
     },
+    removeChangeIndicatorByPath: (state, action: PayloadAction<string>) => {
+      const filePath = action.payload;
+      if (state.changedFiles[filePath]) {
+        delete state.changedFiles[filePath];
+      }
+    },
   },
 });
 
@@ -221,7 +227,8 @@ export const {
   // Visual feedback actions
   clearRecentActivity,
   clearChangedFileIndicators,
-  removeOldChangeIndicators
+  removeOldChangeIndicators,
+  removeChangeIndicatorByPath
 } = fileSystemSlice.actions;
 
 // Helper functions for file system tree manipulation
@@ -273,7 +280,7 @@ function updateNodeByPath(root: FileNode, updatedNode: FileNode): boolean {
       }
     }
   }
-  
+ 
   return false;
 }
 
@@ -289,6 +296,8 @@ function sortFileNodes(nodes: FileNode[]): void {
 
 // Helper function to add activity with size limit
 function addActivity(state: FileSystemState, activity: FileActivity): void {
+  // Check if activity with same ID already exists before adding
+  if (state.recentActivity.some(a => a.id === activity.id)) return;
   state.recentActivity.unshift(activity); // Add to beginning
   state.lastActivityTime = activity.timestamp;
   
@@ -297,6 +306,9 @@ function addActivity(state: FileSystemState, activity: FileActivity): void {
     state.recentActivity = state.recentActivity.slice(0, 20);
   }
 }
+
+// Note: Cleanup scheduling is handled by visualIndicatorCleanup service
+// This keeps Redux actions pure and allows proper dispatch handling
 
 // Selectors
 export const selectFileSystemData = (state: { fileSystem: FileSystemState }) => {

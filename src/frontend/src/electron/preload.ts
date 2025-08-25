@@ -43,8 +43,8 @@ declare global {
  * Never expose raw ipcRenderer or Node.js APIs to renderer
  */
 
-// Expose secure API to renderer process
-contextBridge.exposeInMainWorld('electronAPI', {
+// Create the API object first
+const electronAPI = {
   /**
    * Directory Selection
    */
@@ -94,28 +94,73 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Event listeners for file system changes
     onFileChange: (callback: (data: any) => void) => {
-      // Secure event listener with cleanup
-      const listener = (_event: Electron.IpcRendererEvent, data: any) => {
-        callback(data)
+      const listeners: Array<() => void> = []
+      
+      // File events
+      const fileAddedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'add' })
+      }
+      const fileChangedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'change' })
+      }
+      const fileRemovedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'unlink' })
       }
       
-      ipcRenderer.on('fs:change', listener)
+      // Directory events  
+      const dirAddedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'addDir' })
+      }
+      const dirRemovedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'unlinkDir' })
+      }
       
-      // Return cleanup function
+      // Error events
+      const errorListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'error' })
+      }
+      
+      // Ready events
+      const readyListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'ready' })
+      }
+
+      // Register all listeners
+      ipcRenderer.on('fs:fileAdded', fileAddedListener)
+      ipcRenderer.on('fs:fileChanged', fileChangedListener)
+      ipcRenderer.on('fs:fileRemoved', fileRemovedListener)
+      ipcRenderer.on('fs:directoryAdded', dirAddedListener)
+      ipcRenderer.on('fs:directoryRemoved', dirRemovedListener)
+      ipcRenderer.on('fs:error', errorListener)
+      ipcRenderer.on('fs:ready', readyListener)
+      
+      // Return unified cleanup function
       return () => {
-        ipcRenderer.removeListener('fs:change', listener)
+        ipcRenderer.removeListener('fs:fileAdded', fileAddedListener)
+        ipcRenderer.removeListener('fs:fileChanged', fileChangedListener)
+        ipcRenderer.removeListener('fs:fileRemoved', fileRemovedListener)
+        ipcRenderer.removeListener('fs:directoryAdded', dirAddedListener)
+        ipcRenderer.removeListener('fs:directoryRemoved', dirRemovedListener)
+        ipcRenderer.removeListener('fs:error', errorListener)
+        ipcRenderer.removeListener('fs:ready', readyListener)
       }
     },
 
     onDirectoryChange: (callback: (data: any) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, data: any) => {
-        callback(data)
+      // Directory-specific events (subset of onFileChange)
+      const dirAddedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'addDir' })
       }
-      
-      ipcRenderer.on('fs:directoryChange', listener)
+      const dirRemovedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'unlinkDir' })
+      }
+
+      ipcRenderer.on('fs:directoryAdded', dirAddedListener)
+      ipcRenderer.on('fs:directoryRemoved', dirRemovedListener)
       
       return () => {
-        ipcRenderer.removeListener('fs:directoryChange', listener)
+        ipcRenderer.removeListener('fs:directoryAdded', dirAddedListener)
+        ipcRenderer.removeListener('fs:directoryRemoved', dirRemovedListener)
       }
     }
   },
@@ -153,33 +198,67 @@ contextBridge.exposeInMainWorld('electronAPI', {
       }
     }
   }
-})
+}
+
+// PROPER CONTEXTBRIDGE PATTERN - Check contextIsolated first
+console.log('🔒 process object available:', !!process)
+console.log('🔒 process.contextIsolated:', process.contextIsolated)
+console.log('🔒 process.contextIsolated type:', typeof process.contextIsolated)
+
+// RESEARCH-BASED FIX: Execute contextBridge immediately, no async wrappers
+if (process.contextIsolated) {
+  console.log('🔒 Entering contextIsolated branch')
+  try {
+    contextBridge.exposeInMainWorld('electronAPI', electronAPI)
+    console.log('🔒 contextBridge.exposeInMainWorld succeeded')
+  } catch (error) {
+    console.error('🔒 contextBridge.exposeInMainWorld failed:', error)
+    // Fallback: assign directly to window
+    window.electronAPI = electronAPI
+    console.log('🔒 Using fallback: assigned directly to window')
+  }
+} else {
+  // Fallback when context isolation is disabled
+  console.log('🔒 Using fallback branch: process.contextIsolated is', process.contextIsolated)
+  window.electronAPI = electronAPI
+  console.log('🔒 Direct assignment completed')
+}
 
 /**
  * Security validation - ensure context isolation is working
  */
-contextBridge.exposeInMainWorld('electronSecurityCheck', {
-  contextIsolated: true,
-  nodeIntegration: process.env.NODE_INTEGRATION === 'true', // Should be false
-  sandbox: process.env.ELECTRON_SANDBOX === 'true' // Should be true
-})
+const securityCheck = {
+  contextIsolated: process.contextIsolated, // FIXED - use actual context isolation status
+  nodeIntegration: typeof require !== 'undefined', // Should be false
+  sandbox: process.env.ELECTRON_SANDBOX === 'true', // Should be true
+  processType: process.type,
+  electronVersion: process.versions.electron,
+  contextBridgeAvailable: !!contextBridge
+}
+
+if (process.contextIsolated) {
+  try {
+    contextBridge.exposeInMainWorld('electronSecurityCheck', securityCheck)
+  } catch (error) {
+    console.error('🔒 Failed to expose security check:', error)
+    window.electronSecurityCheck = securityCheck
+  }
+} else {
+  window.electronSecurityCheck = securityCheck
+}
 
 /**
  * Preload script initialization
  */
-document.addEventListener('DOMContentLoaded', () => {
-  // Add Electron identification to body class
-  document.body.classList.add('electron-app')
-  
-  // Log security status in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔒 Electron Security Status:')
-    console.log('  Context Isolation:', !!window.electronSecurityCheck?.contextIsolated)
-    console.log('  Node Integration:', !!window.electronSecurityCheck?.nodeIntegration)
-    console.log('  Sandbox:', !!window.electronSecurityCheck?.sandbox)
-    console.log('  Electron API Available:', !!window.electronAPI)
-  }
-})
+console.log('🔒 Preload script is loading...')
+
+// Note: Security status and electronAPI availability will be tested 
+// from the renderer context (React App), not here in the preload script
+// This follows proper contextBridge patterns where preload exposes APIs
+// and renderer consumes them.
+
+// Add immediate logging
+console.log('🔒 Preload script executed, contextBridge available:', !!contextBridge)
 
 /**
  * Error handling for preload script

@@ -9,6 +9,7 @@ import {
   updateFileNode
 } from '../store/fileSystemSlice'
 import type { IFileSystemWatcher, FileSystemWatcherOptions } from './IFileSystemWatcher'
+import { scheduleIndicatorCleanup, clearAllIndicatorCleanups } from './visualIndicatorCleanup'
 
 /**
  * Electron File System Watcher
@@ -19,13 +20,11 @@ export class ElectronFileSystemWatcher implements IFileSystemWatcher {
   private dispatch: AppDispatch | null = null
   private watchPath: string | null = null
   private cleanupFunctions: Array<() => void> = []
-  // Options stored for potential future use
-  //private _options: FileSystemWatcherOptions
 
   constructor(dispatch: AppDispatch, _options?: FileSystemWatcherOptions) {
     this.dispatch = dispatch
-    // Options are handled by the Electron main process, not needed here
-    this.setupEventListeners()
+    // Don't set up event listeners in constructor - do it when starting to watch
+    // to ensure window.electronAPI is fully available
   }
 
   /**
@@ -49,6 +48,9 @@ export class ElectronFileSystemWatcher implements IFileSystemWatcher {
       // Cleanup previous watchers
       this.cleanup()
 
+      // Set up event listeners now that we know window.electronAPI is available
+      this.setupEventListeners()
+
       this.dispatch!(setLoadingFileSystem(true))
       this.dispatch!(setFileSystemError(null))
 
@@ -64,13 +66,10 @@ export class ElectronFileSystemWatcher implements IFileSystemWatcher {
         this.dispatch!(setRootDirectory(result.rootNode))
         this.dispatch!(setWatchingDirectory(dirPath))
         this.watchPath = dirPath
-
-        console.log(`🔍 Started watching: ${dirPath}`)
       }
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      console.error('❌ Failed to start watching:', errorMessage)
       this.dispatch!(setFileSystemError(errorMessage))
     } finally {
       this.dispatch!(setLoadingFileSystem(false))
@@ -88,9 +87,10 @@ export class ElectronFileSystemWatcher implements IFileSystemWatcher {
     try {
       await window.electronAPI!.fileSystem.stopWatching()
       this.cleanup()
-      console.log('🛑 Stopped file system watching')
+      // Clear all visual indicator cleanup timers
+      clearAllIndicatorCleanups()
     } catch (error) {
-      console.error('Failed to stop watching:', error)
+      // Failed to stop watching - error handled silently
     }
   }
 
@@ -116,65 +116,82 @@ export class ElectronFileSystemWatcher implements IFileSystemWatcher {
       return
     }
 
-    // Listen for file additions
-    const fileAddedCleanup = window.electronAPI!.fileSystem.onFileChange((data) => {
-      if (data.type === 'add' && this.dispatch) {
-        console.log(`📄 File added: ${data.node?.name}`)
-        this.dispatch(addFileNode({ 
-          parentPath: data.parentPath, 
-          node: data.node 
-        }))
+    // Single unified event listener to handle all file system changes
+    const fileSystemChangeCleanup = window.electronAPI!.fileSystem.onFileChange((data) => {
+      if (!this.dispatch) {
+        return
+      }
+
+      try {
+        switch (data.type) {
+          case 'add':
+            if (data.node && data.parentPath) {
+              this.dispatch(addFileNode({ 
+                parentPath: data.parentPath, 
+                node: data.node 
+              }))
+              scheduleIndicatorCleanup(this.dispatch, data.node.path)
+            }
+            break
+
+          case 'change':
+            if (data.node) {
+              this.dispatch(updateFileNode(data.node))
+              scheduleIndicatorCleanup(this.dispatch, data.node.path)
+            }
+            break
+
+          case 'unlink':
+            if (data.path) {
+              this.dispatch(removeFileNode(data.path))
+              scheduleIndicatorCleanup(this.dispatch, data.path)
+            }
+            break
+
+          case 'addDir':
+            if (data.node && data.parentPath) {
+              this.dispatch(addFileNode({ 
+                parentPath: data.parentPath, 
+                node: data.node 
+              }))
+              scheduleIndicatorCleanup(this.dispatch, data.node.path)
+            }
+            break
+
+          case 'unlinkDir':
+            if (data.path) {
+              this.dispatch(removeFileNode(data.path))
+              scheduleIndicatorCleanup(this.dispatch, data.path)
+            }
+            break
+
+          case 'ready':
+            // File system watcher is ready
+            break
+
+          case 'error':
+            if (data.error) {
+              this.dispatch(setFileSystemError(data.error))
+            }
+            break
+
+          default:
+            // Unhandled event type
+        }
+      } catch (error) {
+        this.dispatch(setFileSystemError(`Failed to process file system event: ${error instanceof Error ? error.message : 'Unknown error'}`))
       }
     })
-    this.cleanupFunctions.push(fileAddedCleanup)
+    this.cleanupFunctions.push(fileSystemChangeCleanup)
 
-    // Listen for file changes
-    const fileChangedCleanup = window.electronAPI!.fileSystem.onFileChange((data) => {
-      if (data.type === 'change' && this.dispatch) {
-        console.log(`📝 File changed: ${data.node?.name}`)
-        this.dispatch(updateFileNode(data.node))
-      }
+    // Also listen for directory-specific events if they're separate
+    const directoryChangeCleanup = window.electronAPI!.fileSystem.onDirectoryChange?.((data) => {
+      // This might be redundant if all events come through onFileChange
+      // Will be cleaned up if not needed
     })
-    this.cleanupFunctions.push(fileChangedCleanup)
-
-    // Listen for file removals
-    const fileRemovedCleanup = window.electronAPI!.fileSystem.onFileChange((data) => {
-      if (data.type === 'unlink' && this.dispatch) {
-        console.log(`🗑️ File removed: ${data.path}`)
-        this.dispatch(removeFileNode(data.path))
-      }
-    })
-    this.cleanupFunctions.push(fileRemovedCleanup)
-
-    // Listen for directory changes
-    const dirChangedCleanup = window.electronAPI!.fileSystem.onDirectoryChange((data) => {
-      if (!this.dispatch) return
-
-      switch (data.type) {
-        case 'addDir':
-          console.log(`📁 Directory added: ${data.node?.name}`)
-          this.dispatch(addFileNode({ 
-            parentPath: data.parentPath, 
-            node: data.node 
-          }))
-          break
-        
-        case 'unlinkDir':
-          console.log(`📂 Directory removed: ${data.path}`)
-          this.dispatch(removeFileNode(data.path))
-          break
-      }
-    })
-    this.cleanupFunctions.push(dirChangedCleanup)
-
-    // Listen for watcher errors
-    const errorCleanup = window.electronAPI!.fileSystem.onFileChange((data) => {
-      if (data.error && this.dispatch) {
-        console.error('❌ File watcher error:', data.error)
-        this.dispatch(setFileSystemError(data.error))
-      }
-    })
-    this.cleanupFunctions.push(errorCleanup)
+    if (directoryChangeCleanup) {
+      this.cleanupFunctions.push(directoryChangeCleanup)
+    }
   }
 
   /**

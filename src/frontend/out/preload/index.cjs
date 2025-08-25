@@ -1,6 +1,6 @@
 "use strict";
 const { contextBridge, ipcRenderer } = require("electron");
-contextBridge.exposeInMainWorld("electronAPI", {
+const electronAPI = {
   /**
    * Directory Selection
    */
@@ -46,21 +46,64 @@ contextBridge.exposeInMainWorld("electronAPI", {
     },
     // Event listeners for file system changes
     onFileChange: (callback) => {
-      const listener = (_event, data) => {
-        callback(data);
+      const fileAddedListener = (_event, data) => {
+        console.log("🌉 IPC event received: fs:fileAdded", data);
+        callback({ ...data, type: "add" });
       };
-      ipcRenderer.on("fs:change", listener);
+      const fileChangedListener = (_event, data) => {
+        console.log("🌉 IPC event received: fs:fileChanged", data);
+        callback({ ...data, type: "change" });
+      };
+      const fileRemovedListener = (_event, data) => {
+        console.log("🌉 IPC event received: fs:fileRemoved", data);
+        callback({ ...data, type: "unlink" });
+      };
+      const dirAddedListener = (_event, data) => {
+        console.log("🌉 IPC event received: fs:directoryAdded", data);
+        callback({ ...data, type: "addDir" });
+      };
+      const dirRemovedListener = (_event, data) => {
+        console.log("🌉 IPC event received: fs:directoryRemoved", data);
+        callback({ ...data, type: "unlinkDir" });
+      };
+      const errorListener = (_event, data) => {
+        console.log("🌉 IPC event received: fs:error", data);
+        callback({ ...data, type: "error" });
+      };
+      const readyListener = (_event, data) => {
+        console.log("🌉 IPC event received: fs:ready", data);
+        callback({ ...data, type: "ready" });
+      };
+      ipcRenderer.on("fs:fileAdded", fileAddedListener);
+      ipcRenderer.on("fs:fileChanged", fileChangedListener);
+      ipcRenderer.on("fs:fileRemoved", fileRemovedListener);
+      ipcRenderer.on("fs:directoryAdded", dirAddedListener);
+      ipcRenderer.on("fs:directoryRemoved", dirRemovedListener);
+      ipcRenderer.on("fs:error", errorListener);
+      ipcRenderer.on("fs:ready", readyListener);
+      console.log("🌉 IPC event listeners registered for file system changes");
       return () => {
-        ipcRenderer.removeListener("fs:change", listener);
+        ipcRenderer.removeListener("fs:fileAdded", fileAddedListener);
+        ipcRenderer.removeListener("fs:fileChanged", fileChangedListener);
+        ipcRenderer.removeListener("fs:fileRemoved", fileRemovedListener);
+        ipcRenderer.removeListener("fs:directoryAdded", dirAddedListener);
+        ipcRenderer.removeListener("fs:directoryRemoved", dirRemovedListener);
+        ipcRenderer.removeListener("fs:error", errorListener);
+        ipcRenderer.removeListener("fs:ready", readyListener);
       };
     },
     onDirectoryChange: (callback) => {
-      const listener = (_event, data) => {
-        callback(data);
+      const dirAddedListener = (_event, data) => {
+        callback({ ...data, type: "addDir" });
       };
-      ipcRenderer.on("fs:directoryChange", listener);
+      const dirRemovedListener = (_event, data) => {
+        callback({ ...data, type: "unlinkDir" });
+      };
+      ipcRenderer.on("fs:directoryAdded", dirAddedListener);
+      ipcRenderer.on("fs:directoryRemoved", dirRemovedListener);
       return () => {
-        ipcRenderer.removeListener("fs:directoryChange", listener);
+        ipcRenderer.removeListener("fs:directoryAdded", dirAddedListener);
+        ipcRenderer.removeListener("fs:directoryRemoved", dirRemovedListener);
       };
     }
   },
@@ -93,24 +136,48 @@ contextBridge.exposeInMainWorld("electronAPI", {
       }
     }
   }
-});
-contextBridge.exposeInMainWorld("electronSecurityCheck", {
-  contextIsolated: true,
-  nodeIntegration: process.env.NODE_INTEGRATION === "true",
-  // Should be false
-  sandbox: process.env.ELECTRON_SANDBOX === "true"
-  // Should be true
-});
-document.addEventListener("DOMContentLoaded", () => {
-  document.body.classList.add("electron-app");
-  if (process.env.NODE_ENV === "development") {
-    console.log("🔒 Electron Security Status:");
-    console.log("  Context Isolation:", !!window.electronSecurityCheck?.contextIsolated);
-    console.log("  Node Integration:", !!window.electronSecurityCheck?.nodeIntegration);
-    console.log("  Sandbox:", !!window.electronSecurityCheck?.sandbox);
-    console.log("  Electron API Available:", !!window.electronAPI);
+};
+console.log("🔒 process object available:", !!process);
+console.log("🔒 process.contextIsolated:", process.contextIsolated);
+console.log("🔒 process.contextIsolated type:", typeof process.contextIsolated);
+if (process.contextIsolated) {
+  console.log("🔒 Entering contextIsolated branch");
+  try {
+    contextBridge.exposeInMainWorld("electronAPI", electronAPI);
+    console.log("🔒 contextBridge.exposeInMainWorld succeeded");
+  } catch (error) {
+    console.error("🔒 contextBridge.exposeInMainWorld failed:", error);
+    window.electronAPI = electronAPI;
+    console.log("🔒 Using fallback: assigned directly to window");
   }
-});
+} else {
+  console.log("🔒 Using fallback branch: process.contextIsolated is", process.contextIsolated);
+  window.electronAPI = electronAPI;
+  console.log("🔒 Direct assignment completed");
+}
+const securityCheck = {
+  contextIsolated: process.contextIsolated,
+  // FIXED - use actual context isolation status
+  nodeIntegration: typeof require !== "undefined",
+  // Should be false
+  sandbox: process.env.ELECTRON_SANDBOX === "true",
+  // Should be true
+  processType: process.type,
+  electronVersion: process.versions.electron,
+  contextBridgeAvailable: !!contextBridge
+};
+if (process.contextIsolated) {
+  try {
+    contextBridge.exposeInMainWorld("electronSecurityCheck", securityCheck);
+  } catch (error) {
+    console.error("🔒 Failed to expose security check:", error);
+    window.electronSecurityCheck = securityCheck;
+  }
+} else {
+  window.electronSecurityCheck = securityCheck;
+}
+console.log("🔒 Preload script is loading...");
+console.log("🔒 Preload script executed, contextBridge available:", !!contextBridge);
 process.on("uncaughtException", (error) => {
   console.error("Preload script error:", error);
 });

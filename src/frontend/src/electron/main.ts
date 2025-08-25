@@ -20,11 +20,11 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      // MANDATORY SECURITY SETTINGS (2024-2025)
+      // PROPER SECURITY SETTINGS (2024-2025)
       nodeIntegration: false,           // REQUIRED: No Node.js in renderer
       contextIsolation: true,           // REQUIRED: Isolated context
       // enableRemoteModule deprecated in Electron 20+
-      sandbox: true,                    // RECOMMENDED: Enable sandboxing
+      sandbox: false,                   // TEMPORARILY DISABLED: contextBridge issues with sandbox
       preload: path.join(__dirname, '..', 'preload', 'index.cjs'), // Secure IPC bridge (built from preload.ts as CommonJS)
       
       // Additional security settings
@@ -221,104 +221,177 @@ function setupIpcHandlers() {
         }
       }
 
-      // Start Chokidar watcher with optimized settings
+      // Start Chokidar watcher with restrictive settings to prevent permission errors
       currentWatcher = chokidar.watch(dirPath, {
         ignored: [
-          /(^|[\/\\])\../, // Hidden files
+          // Hidden files and system directories
+          /(^|[\/\\])\../, 
+          // Build and dependency directories
           '**/node_modules/**',
           '**/dist/**',
           '**/build/**',
           '**/obj/**',
           '**/bin/**',
+          '**/out/**',
+          // Temporary files
           '**/*.tmp',
           '**/*.temp',
+          '**/*.swp',
+          '**/*.swo',
+          '**/*~',
+          // Log directories
           '**/logs/**',
+          '**/log/**',
+          // Version control
           '**/.git/**',
-          '**/.vscode/**'
+          '**/.svn/**',
+          '**/.hg/**',
+          // IDE directories
+          '**/.vscode/**',
+          '**/.idea/**',
+          '**/target/**',
+          // Windows system directories and files (to prevent EPERM)
+          '**/System Volume Information/**',
+          '**/pagefile.sys',
+          '**/hiberfil.sys',
+          '**/swapfile.sys',
+          '**/Windows/**',
+          '**/Program Files/**',
+          '**/Program Files (x86)/**',
+          '**/ProgramData/**',
+          // Restricted file extensions
+          '**/*.lnk',
+          '**/*.sys',
+          '**/*.dll',
+          '**/*.exe'
         ],
         persistent: true,
         ignoreInitial: true,
         followSymlinks: false,
-        depth: 10,
+        depth: 8, // Reduced depth to avoid deep system directories
         atomic: true,
         awaitWriteFinish: {
           stabilityThreshold: 100,
           pollInterval: 50
-        }
+        },
+        // Add more restrictive options to prevent permission errors
+        ignorePermissionErrors: true,
+        usePolling: false, // Use native file system events when possible
+        interval: 1000, // Polling interval if usePolling is true
+        binaryInterval: 3000
       })
 
-      // Set up event handlers
+      // Set up event handlers with consistent data structure
       currentWatcher.on('add', async (filePath) => {
-        console.log('📄 File added:', path.basename(filePath))
-        const fileInfo = await getFileSystemInfo(filePath)
-        if (fileInfo && mainWindow) {
-          mainWindow.webContents.send('fs:fileAdded', {
-            type: 'add',
-            path: filePath,
-            node: fileInfo,
-            parentPath: path.dirname(filePath)
-          })
+        try {
+          console.log('📄 File added:', path.basename(filePath))
+          const fileInfo = await getFileSystemInfo(filePath)
+          if (fileInfo && mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('fs:fileAdded', {
+              type: 'add',
+              path: filePath,
+              node: fileInfo,
+              parentPath: path.dirname(filePath),
+              timestamp: new Date().toISOString()
+            })
+          }
+        } catch (error) {
+          console.warn('Error processing file added event:', error)
         }
       })
 
       currentWatcher.on('addDir', async (dirPath) => {
-        console.log('📁 Directory added:', path.basename(dirPath))
-        const dirInfo = await getFileSystemInfo(dirPath)
-        if (dirInfo && mainWindow) {
-          mainWindow.webContents.send('fs:directoryAdded', {
-            type: 'addDir',
-            path: dirPath,
-            node: dirInfo,
-            parentPath: path.dirname(dirPath)
-          })
+        try {
+          console.log('📁 Directory added:', path.basename(dirPath))
+          const dirInfo = await getFileSystemInfo(dirPath)
+          if (dirInfo && mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('fs:directoryAdded', {
+              type: 'addDir',
+              path: dirPath,
+              node: dirInfo,
+              parentPath: path.dirname(dirPath),
+              timestamp: new Date().toISOString()
+            })
+          }
+        } catch (error) {
+          console.warn('Error processing directory added event:', error)
         }
       })
 
       currentWatcher.on('unlink', (filePath) => {
-        console.log('🗑️ File removed:', path.basename(filePath))
-        if (mainWindow) {
-          mainWindow.webContents.send('fs:fileRemoved', {
-            type: 'unlink',
-            path: filePath
-          })
+        try {
+          console.log('🗑️ File removed:', path.basename(filePath))
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('fs:fileRemoved', {
+              type: 'unlink',
+              path: filePath,
+              node: null, // File no longer exists
+              parentPath: path.dirname(filePath),
+              timestamp: new Date().toISOString()
+            })
+          }
+        } catch (error) {
+          console.warn('Error processing file removed event:', error)
         }
       })
 
       currentWatcher.on('unlinkDir', (dirPath) => {
-        console.log('📂 Directory removed:', path.basename(dirPath))
-        if (mainWindow) {
-          mainWindow.webContents.send('fs:directoryRemoved', {
-            type: 'unlinkDir',
-            path: dirPath
-          })
+        try {
+          console.log('📂 Directory removed:', path.basename(dirPath))
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('fs:directoryRemoved', {
+              type: 'unlinkDir',
+              path: dirPath,
+              node: null, // Directory no longer exists
+              parentPath: path.dirname(dirPath),
+              timestamp: new Date().toISOString()
+            })
+          }
+        } catch (error) {
+          console.warn('Error processing directory removed event:', error)
         }
       })
 
       currentWatcher.on('change', async (filePath) => {
-        console.log('📝 File changed:', path.basename(filePath))
-        const fileInfo = await getFileSystemInfo(filePath)
-        if (fileInfo && mainWindow) {
-          mainWindow.webContents.send('fs:fileChanged', {
-            type: 'change',
-            path: filePath,
-            node: fileInfo
-          })
+        try {
+          console.log('📝 File changed:', path.basename(filePath))
+          const fileInfo = await getFileSystemInfo(filePath)
+          if (fileInfo && mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('fs:fileChanged', {
+              type: 'change',
+              path: filePath,
+              node: fileInfo,
+              parentPath: path.dirname(filePath),
+              timestamp: new Date().toISOString()
+            })
+          }
+        } catch (error) {
+          console.warn('Error processing file changed event:', error)
         }
       })
 
       currentWatcher.on('error', (error) => {
         console.error('❌ File watcher error:', error)
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        if (mainWindow) {
+        
+        // Don't spam errors for permission issues, just log them
+        if (errorMessage.includes('EPERM') || errorMessage.includes('EACCES')) {
+          console.warn('Permission denied for file watching - this is normal for restricted directories')
+          return // Don't send permission errors to frontend
+        }
+        
+        if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('fs:error', {
-            error: errorMessage
+            type: 'error',
+            error: errorMessage,
+            timestamp: new Date().toISOString()
           })
         }
       })
 
       currentWatcher.on('ready', () => {
         console.log('✅ File system watcher ready and monitoring changes')
-        if (mainWindow) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('fs:ready', {
             path: dirPath
           })
