@@ -199,7 +199,6 @@ const fileSystemSlice = createSlice({
       const filePath = action.payload;
       if (state.changedFiles[filePath]) {
         delete state.changedFiles[filePath];
-        console.log(`🧹 Cleaned up visual indicator for: ${filePath}`);
       }
     },
   },

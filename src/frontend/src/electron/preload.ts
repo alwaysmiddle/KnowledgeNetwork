@@ -43,8 +43,8 @@ declare global {
  * Never expose raw ipcRenderer or Node.js APIs to renderer
  */
 
-// Expose secure API to renderer process
-contextBridge.exposeInMainWorld('electronAPI', {
+// Create the API object first
+const electronAPI = {
   /**
    * Directory Selection
    */
@@ -198,33 +198,67 @@ contextBridge.exposeInMainWorld('electronAPI', {
       }
     }
   }
-})
+}
+
+// PROPER CONTEXTBRIDGE PATTERN - Check contextIsolated first
+console.log('🔒 process object available:', !!process)
+console.log('🔒 process.contextIsolated:', process.contextIsolated)
+console.log('🔒 process.contextIsolated type:', typeof process.contextIsolated)
+
+// RESEARCH-BASED FIX: Execute contextBridge immediately, no async wrappers
+if (process.contextIsolated) {
+  console.log('🔒 Entering contextIsolated branch')
+  try {
+    contextBridge.exposeInMainWorld('electronAPI', electronAPI)
+    console.log('🔒 contextBridge.exposeInMainWorld succeeded')
+  } catch (error) {
+    console.error('🔒 contextBridge.exposeInMainWorld failed:', error)
+    // Fallback: assign directly to window
+    window.electronAPI = electronAPI
+    console.log('🔒 Using fallback: assigned directly to window')
+  }
+} else {
+  // Fallback when context isolation is disabled
+  console.log('🔒 Using fallback branch: process.contextIsolated is', process.contextIsolated)
+  window.electronAPI = electronAPI
+  console.log('🔒 Direct assignment completed')
+}
 
 /**
  * Security validation - ensure context isolation is working
  */
-contextBridge.exposeInMainWorld('electronSecurityCheck', {
-  contextIsolated: true,
-  nodeIntegration: process.env.NODE_INTEGRATION === 'true', // Should be false
-  sandbox: process.env.ELECTRON_SANDBOX === 'true' // Should be true
-})
+const securityCheck = {
+  contextIsolated: process.contextIsolated, // FIXED - use actual context isolation status
+  nodeIntegration: typeof require !== 'undefined', // Should be false
+  sandbox: process.env.ELECTRON_SANDBOX === 'true', // Should be true
+  processType: process.type,
+  electronVersion: process.versions.electron,
+  contextBridgeAvailable: !!contextBridge
+}
+
+if (process.contextIsolated) {
+  try {
+    contextBridge.exposeInMainWorld('electronSecurityCheck', securityCheck)
+  } catch (error) {
+    console.error('🔒 Failed to expose security check:', error)
+    window.electronSecurityCheck = securityCheck
+  }
+} else {
+  window.electronSecurityCheck = securityCheck
+}
 
 /**
  * Preload script initialization
  */
-document.addEventListener('DOMContentLoaded', () => {
-  // Add Electron identification to body class
-  document.body.classList.add('electron-app')
-  
-  // Log security status in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔒 Electron Security Status:')
-    console.log('  Context Isolation:', !!window.electronSecurityCheck?.contextIsolated)
-    console.log('  Node Integration:', !!window.electronSecurityCheck?.nodeIntegration)
-    console.log('  Sandbox:', !!window.electronSecurityCheck?.sandbox)
-    console.log('  Electron API Available:', !!window.electronAPI)
-  }
-})
+console.log('🔒 Preload script is loading...')
+
+// Note: Security status and electronAPI availability will be tested 
+// from the renderer context (React App), not here in the preload script
+// This follows proper contextBridge patterns where preload exposes APIs
+// and renderer consumes them.
+
+// Add immediate logging
+console.log('🔒 Preload script executed, contextBridge available:', !!contextBridge)
 
 /**
  * Error handling for preload script

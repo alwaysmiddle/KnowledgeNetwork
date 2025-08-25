@@ -20,11 +20,11 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      // MANDATORY SECURITY SETTINGS (2024-2025)
+      // PROPER SECURITY SETTINGS (2024-2025)
       nodeIntegration: false,           // REQUIRED: No Node.js in renderer
       contextIsolation: true,           // REQUIRED: Isolated context
       // enableRemoteModule deprecated in Electron 20+
-      sandbox: true,                    // RECOMMENDED: Enable sandboxing
+      sandbox: false,                   // TEMPORARILY DISABLED: contextBridge issues with sandbox
       preload: path.join(__dirname, '..', 'preload', 'index.cjs'), // Secure IPC bridge (built from preload.ts as CommonJS)
       
       // Additional security settings

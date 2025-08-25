@@ -13861,14 +13861,19 @@ const fileSystemSlice = createSlice({
     },
     // Real-time file system update actions with activity tracking
     addFileNode: (state, action) => {
+      console.log("🔧 Redux addFileNode called:", action.payload);
       if (state.rootDirectory) {
         const { parentPath, node } = action.payload;
+        console.log("🔧 Looking for parent node at path:", parentPath);
         const parentNode = findNodeByPath(state.rootDirectory, parentPath);
         if (parentNode && parentNode.children) {
+          console.log("🔧 Found parent node:", parentNode.name, "adding child:", node.name);
+          const beforeCount = parentNode.children.length;
           parentNode.children.push(node);
           sortFileNodes(parentNode.children);
+          console.log(`🔧 Children count: ${beforeCount} -> ${parentNode.children.length}`);
           addActivity(state, {
-            id: `add-${Date.now()}-${node.id}`,
+            id: `add-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${node.path}`,
             type: "added",
             fileName: node.name,
             filePath: node.path,
@@ -13878,16 +13883,24 @@ const fileSystemSlice = createSlice({
             type: "added",
             timestamp: (/* @__PURE__ */ new Date()).toISOString()
           };
+          console.log("🔧 Successfully added node and marked as changed");
+        } else {
+          console.warn("🔧 Parent node not found or has no children array:", { parentNode: !!parentNode, hasChildren: parentNode?.children?.length });
         }
+      } else {
+        console.warn("🔧 No root directory available in state");
       }
     },
     removeFileNode: (state, action) => {
+      console.log("🔧 Redux removeFileNode called:", action.payload);
       if (state.rootDirectory) {
         const filePath = action.payload;
+        console.log("🔧 Looking for node to remove at path:", filePath);
         const removedNode = findNodeByPath(state.rootDirectory, filePath);
         if (removedNode && removeNodeByPath(state.rootDirectory, filePath)) {
+          console.log("🔧 Successfully removed node:", removedNode.name);
           addActivity(state, {
-            id: `remove-${Date.now()}-${removedNode.id}`,
+            id: `remove-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${removedNode.path}`,
             type: "removed",
             fileName: removedNode.name,
             filePath: removedNode.path,
@@ -13897,15 +13910,23 @@ const fileSystemSlice = createSlice({
             type: "removed",
             timestamp: (/* @__PURE__ */ new Date()).toISOString()
           };
+          console.log("🔧 Tracked activity and marked as changed");
+        } else {
+          console.warn("🔧 Node not found or removal failed:", { foundNode: !!removedNode });
         }
+      } else {
+        console.warn("🔧 No root directory available in state");
       }
     },
     updateFileNode: (state, action) => {
+      console.log("🔧 Redux updateFileNode called:", action.payload);
       if (state.rootDirectory) {
         const updatedNode = action.payload;
+        console.log("🔧 Looking for node to update at path:", updatedNode.path);
         if (updateNodeByPath(state.rootDirectory, updatedNode)) {
+          console.log("🔧 Successfully updated node:", updatedNode.name);
           addActivity(state, {
-            id: `update-${Date.now()}-${updatedNode.id}`,
+            id: `update-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${updatedNode.path}`,
             type: "modified",
             fileName: updatedNode.name,
             filePath: updatedNode.path,
@@ -13915,7 +13936,12 @@ const fileSystemSlice = createSlice({
             type: "modified",
             timestamp: (/* @__PURE__ */ new Date()).toISOString()
           };
+          console.log("🔧 Tracked activity and marked as changed");
+        } else {
+          console.warn("🔧 Update failed for node:", updatedNode.name);
         }
+      } else {
+        console.warn("🔧 No root directory available in state");
       }
     },
     // Visual feedback actions
@@ -14020,6 +14046,7 @@ function sortFileNodes(nodes) {
   });
 }
 function addActivity(state, activity) {
+  if (state.recentActivity.some((a) => a.id === activity.id)) return;
   state.recentActivity.unshift(activity);
   state.lastActivityTime = activity.timestamp;
   if (state.recentActivity.length > 20) {
@@ -16945,8 +16972,6 @@ class ElectronFileSystemWatcher {
   dispatch = null;
   watchPath = null;
   cleanupFunctions = [];
-  // Options stored for potential future use
-  //private _options: FileSystemWatcherOptions
   constructor(dispatch, _options) {
     this.dispatch = dispatch;
     this.setupEventListeners();
@@ -17022,77 +17047,86 @@ class ElectronFileSystemWatcher {
       return;
     }
     const fileSystemChangeCleanup = window.electronAPI.fileSystem.onFileChange((data) => {
-      if (!this.dispatch) return;
+      console.log("🔧 Frontend service received event:", data.type, data);
+      if (!this.dispatch) {
+        console.warn("🔧 No dispatch available in frontend service");
+        return;
+      }
       try {
-        console.log(`🔍 File system event received:`, {
-          type: data.type,
-          path: data.path,
-          nodeName: data.node?.name,
-          parentPath: data.parentPath
-        });
+        console.log(`🔧 Processing ${data.type} event for:`, data.node?.name || data.path);
         switch (data.type) {
           case "add":
             if (data.node && data.parentPath) {
               console.log(`📄 File added: ${data.node.name}`);
+              console.log("🔧 Dispatching addFileNode:", { parentPath: data.parentPath, node: data.node });
               this.dispatch(addFileNode({
                 parentPath: data.parentPath,
                 node: data.node
               }));
               scheduleIndicatorCleanup(this.dispatch, data.node.path);
             } else {
-              console.warn("❌ Invalid add event data:", data);
+              console.warn("🔧 Missing data for add event:", { node: !!data.node, parentPath: !!data.parentPath });
             }
             break;
           case "change":
             if (data.node) {
               console.log(`📝 File changed: ${data.node.name}`);
+              console.log("🔧 Dispatching updateFileNode:", data.node);
               this.dispatch(updateFileNode(data.node));
               scheduleIndicatorCleanup(this.dispatch, data.node.path);
             } else {
-              console.warn("❌ Invalid change event data:", data);
+              console.warn("🔧 Missing node data for change event:", data);
             }
             break;
           case "unlink":
             if (data.path) {
               const fileName = data.path.split(/[/\\]/).pop() || "unknown file";
               console.log(`🗑️ File removed: ${fileName}`);
+              console.log("🔧 Dispatching removeFileNode:", data.path);
               this.dispatch(removeFileNode(data.path));
               scheduleIndicatorCleanup(this.dispatch, data.path);
             } else {
-              console.warn("❌ Invalid unlink event data:", data);
+              console.warn("🔧 Missing path data for unlink event:", data);
             }
             break;
           case "addDir":
             if (data.node && data.parentPath) {
               console.log(`📁 Directory added: ${data.node.name}`);
+              console.log("🔧 Dispatching addFileNode for directory:", { parentPath: data.parentPath, node: data.node });
               this.dispatch(addFileNode({
                 parentPath: data.parentPath,
                 node: data.node
               }));
               scheduleIndicatorCleanup(this.dispatch, data.node.path);
             } else {
-              console.warn("❌ Invalid addDir event data:", data);
+              console.warn("🔧 Missing data for addDir event:", { node: !!data.node, parentPath: !!data.parentPath });
             }
             break;
           case "unlinkDir":
             if (data.path) {
               const dirName = data.path.split(/[/\\]/).pop() || "unknown directory";
               console.log(`📂 Directory removed: ${dirName}`);
+              console.log("🔧 Dispatching removeFileNode for directory:", data.path);
               this.dispatch(removeFileNode(data.path));
               scheduleIndicatorCleanup(this.dispatch, data.path);
             } else {
-              console.warn("❌ Invalid unlinkDir event data:", data);
+              console.warn("🔧 Missing path data for unlinkDir event:", data);
+            }
+            break;
+          case "ready":
+            console.log(`✅ File system watcher ready for: ${data.path}`);
+            break;
+          case "error":
+            if (data.error) {
+              console.error("❌ File watcher error:", data.error);
+              this.dispatch(setFileSystemError(data.error));
             }
             break;
           default:
             console.log(`🔍 Unhandled event type: ${data.type}`);
         }
-        if (data.error) {
-          console.error("❌ File watcher error:", data.error);
-          this.dispatch(setFileSystemError(data.error));
-        }
       } catch (error) {
-        console.error("❌ Error processing file system event:", error, data);
+        console.error("❌ Error processing file system event:", error);
         this.dispatch(setFileSystemError(`Failed to process file system event: ${error instanceof Error ? error.message : "Unknown error"}`));
       }
     });
