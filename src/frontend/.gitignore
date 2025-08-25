@@ -7,11 +7,35 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build outputs
 dist
 dist-electron
 dist-ssr
+out
+release
+build
+
+# Electron packaging
+*.asar
+*.asar.unpacked
+*.dmg
+*.exe
+*.app
+*.msi
+*.deb
+*.rpm
+*.snap
+*.tgz
+*.zip
+*.tar.gz
+
+# Local env files
 *.local
+.env
+.env.*
 
 # Editor directories and files
 .vscode/*
@@ -23,3 +47,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Cache
+.cache
+.parcel-cache
+.eslintcache
