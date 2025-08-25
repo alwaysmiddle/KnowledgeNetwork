@@ -98,14 +98,26 @@ export function CodeAnalysisPage() {
           {isLoading && '⏳ Loading...'}
           {error && <span className="text-red-400">❌ {error}</span>}
           {!isLoading && !error && currentFileSystemData && isWatching && (
-            <div className="flex items-center justify-between">
-              <span className="text-green-400">🔍 Watching: {watchingDirectory}</span>
-              <button
-                onClick={handleStopWatching}
-                className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
-              >
-                Stop
-              </button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-green-400 font-medium">🔍 Watching</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleStopWatching}
+                    className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+                  >
+                    Stop Watching
+                  </button>
+                </div>
+              </div>
+              <div className="bg-green-900/20 border border-green-600/30 rounded p-2">
+                <div className="text-xs text-green-300 font-mono truncate" title={watchingDirectory}>
+                  {watchingDirectory}
+                </div>
+                <div className="text-xs text-green-500 mt-1">
+                  Live file monitoring active
+                </div>
+              </div>
             </div>
           )}
           {!isLoading && !error && !currentFileSystemData && '📁 No directory selected'}
@@ -113,12 +125,12 @@ export function CodeAnalysisPage() {
       </div>
       
       {/* Directory Selection Interface */}
-      {!isWatching && (
-        <div className="mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
-          <h3 className="text-sm font-medium mb-3">
-            {fsContext.isElectron ? '🚀 Directory Selection' : '🧪 File Watching Test'}
-          </h3>
-          
+      <div className="mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
+        <h3 className="text-sm font-medium mb-3">
+          {fsContext.isElectron ? '🚀 Directory Selection' : '🧪 File Watching Test'}
+        </h3>
+        
+        {!isWatching ? (
           <div className="space-y-3">
             {hasNativeDirectoryPicker() ? (
               // Electron: Native directory picker
@@ -142,8 +154,8 @@ export function CodeAnalysisPage() {
 
                 <div className="text-xs text-gray-400 bg-purple-900/20 p-2 rounded">
                   <strong>Native Directory Picker:</strong><br/>
-                  Click above to select any directory on your system using the native OS dialog.
-                  The selected directory will be watched for real-time file changes.
+                  Select any directory on your system for real-time file monitoring.
+                  Visual indicators will show file additions, modifications, and deletions.
                 </div>
               </>
             ) : (
@@ -194,8 +206,75 @@ export function CodeAnalysisPage() {
               </>
             )}
           </div>
-        </div>
-      )}
+        ) : (
+          // Watching state - show change directory option
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="text-green-400 mb-2">✅ Directory watching is active</div>
+            </div>
+            
+            {hasNativeDirectoryPicker() ? (
+              <button
+                onClick={handleSelectNativeDirectory}
+                disabled={isLoading}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm rounded-md transition-colors flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    Changing...
+                  </>
+                ) : (
+                  <>
+                    🔄 Change Directory
+                  </>
+                )}
+              </button>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-gray-400">
+                    Change to Different Directory
+                  </label>
+                  <select
+                    value={selectedTestPath}
+                    onChange={(e) => setSelectedTestPath(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="">Select directory to watch...</option>
+                    {testDirectories.map((dir) => (
+                      <option key={dir.path} value={dir.path}>
+                        {dir.label} ({dir.path})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  onClick={handleStartWatching}
+                  disabled={!selectedTestPath || isLoading}
+                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm rounded-md transition-colors flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      Changing...
+                    </>
+                  ) : (
+                    <>
+                      🔄 Change Directory
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+            
+            <div className="text-xs text-gray-400 bg-blue-900/20 p-2 rounded text-center">
+              <strong>Tip:</strong> Changing directory will automatically stop watching the current one and start watching the new selection.
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* File Tree */}
       {currentFileSystemData ? (

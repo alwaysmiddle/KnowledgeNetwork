@@ -94,28 +94,73 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Event listeners for file system changes
     onFileChange: (callback: (data: any) => void) => {
-      // Secure event listener with cleanup
-      const listener = (_event: Electron.IpcRendererEvent, data: any) => {
-        callback(data)
+      const listeners: Array<() => void> = []
+      
+      // File events
+      const fileAddedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'add' })
+      }
+      const fileChangedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'change' })
+      }
+      const fileRemovedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'unlink' })
       }
       
-      ipcRenderer.on('fs:change', listener)
+      // Directory events  
+      const dirAddedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'addDir' })
+      }
+      const dirRemovedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'unlinkDir' })
+      }
       
-      // Return cleanup function
+      // Error events
+      const errorListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'error' })
+      }
+      
+      // Ready events
+      const readyListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'ready' })
+      }
+
+      // Register all listeners
+      ipcRenderer.on('fs:fileAdded', fileAddedListener)
+      ipcRenderer.on('fs:fileChanged', fileChangedListener)
+      ipcRenderer.on('fs:fileRemoved', fileRemovedListener)
+      ipcRenderer.on('fs:directoryAdded', dirAddedListener)
+      ipcRenderer.on('fs:directoryRemoved', dirRemovedListener)
+      ipcRenderer.on('fs:error', errorListener)
+      ipcRenderer.on('fs:ready', readyListener)
+      
+      // Return unified cleanup function
       return () => {
-        ipcRenderer.removeListener('fs:change', listener)
+        ipcRenderer.removeListener('fs:fileAdded', fileAddedListener)
+        ipcRenderer.removeListener('fs:fileChanged', fileChangedListener)
+        ipcRenderer.removeListener('fs:fileRemoved', fileRemovedListener)
+        ipcRenderer.removeListener('fs:directoryAdded', dirAddedListener)
+        ipcRenderer.removeListener('fs:directoryRemoved', dirRemovedListener)
+        ipcRenderer.removeListener('fs:error', errorListener)
+        ipcRenderer.removeListener('fs:ready', readyListener)
       }
     },
 
     onDirectoryChange: (callback: (data: any) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, data: any) => {
-        callback(data)
+      // Directory-specific events (subset of onFileChange)
+      const dirAddedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'addDir' })
       }
-      
-      ipcRenderer.on('fs:directoryChange', listener)
+      const dirRemovedListener = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback({ ...data, type: 'unlinkDir' })
+      }
+
+      ipcRenderer.on('fs:directoryAdded', dirAddedListener)
+      ipcRenderer.on('fs:directoryRemoved', dirRemovedListener)
       
       return () => {
-        ipcRenderer.removeListener('fs:directoryChange', listener)
+        ipcRenderer.removeListener('fs:directoryAdded', dirAddedListener)
+        ipcRenderer.removeListener('fs:directoryRemoved', dirRemovedListener)
       }
     }
   },

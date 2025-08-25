@@ -46,21 +46,56 @@ contextBridge.exposeInMainWorld("electronAPI", {
     },
     // Event listeners for file system changes
     onFileChange: (callback) => {
-      const listener = (_event, data) => {
-        callback(data);
+      const fileAddedListener = (_event, data) => {
+        callback({ ...data, type: "add" });
       };
-      ipcRenderer.on("fs:change", listener);
+      const fileChangedListener = (_event, data) => {
+        callback({ ...data, type: "change" });
+      };
+      const fileRemovedListener = (_event, data) => {
+        callback({ ...data, type: "unlink" });
+      };
+      const dirAddedListener = (_event, data) => {
+        callback({ ...data, type: "addDir" });
+      };
+      const dirRemovedListener = (_event, data) => {
+        callback({ ...data, type: "unlinkDir" });
+      };
+      const errorListener = (_event, data) => {
+        callback({ ...data, type: "error" });
+      };
+      const readyListener = (_event, data) => {
+        callback({ ...data, type: "ready" });
+      };
+      ipcRenderer.on("fs:fileAdded", fileAddedListener);
+      ipcRenderer.on("fs:fileChanged", fileChangedListener);
+      ipcRenderer.on("fs:fileRemoved", fileRemovedListener);
+      ipcRenderer.on("fs:directoryAdded", dirAddedListener);
+      ipcRenderer.on("fs:directoryRemoved", dirRemovedListener);
+      ipcRenderer.on("fs:error", errorListener);
+      ipcRenderer.on("fs:ready", readyListener);
       return () => {
-        ipcRenderer.removeListener("fs:change", listener);
+        ipcRenderer.removeListener("fs:fileAdded", fileAddedListener);
+        ipcRenderer.removeListener("fs:fileChanged", fileChangedListener);
+        ipcRenderer.removeListener("fs:fileRemoved", fileRemovedListener);
+        ipcRenderer.removeListener("fs:directoryAdded", dirAddedListener);
+        ipcRenderer.removeListener("fs:directoryRemoved", dirRemovedListener);
+        ipcRenderer.removeListener("fs:error", errorListener);
+        ipcRenderer.removeListener("fs:ready", readyListener);
       };
     },
     onDirectoryChange: (callback) => {
-      const listener = (_event, data) => {
-        callback(data);
+      const dirAddedListener = (_event, data) => {
+        callback({ ...data, type: "addDir" });
       };
-      ipcRenderer.on("fs:directoryChange", listener);
+      const dirRemovedListener = (_event, data) => {
+        callback({ ...data, type: "unlinkDir" });
+      };
+      ipcRenderer.on("fs:directoryAdded", dirAddedListener);
+      ipcRenderer.on("fs:directoryRemoved", dirRemovedListener);
       return () => {
-        ipcRenderer.removeListener("fs:directoryChange", listener);
+        ipcRenderer.removeListener("fs:directoryAdded", dirAddedListener);
+        ipcRenderer.removeListener("fs:directoryRemoved", dirRemovedListener);
       };
     }
   },
