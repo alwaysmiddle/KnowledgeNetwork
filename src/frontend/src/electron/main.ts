@@ -25,7 +25,7 @@ function createWindow() {
       contextIsolation: true,           // REQUIRED: Isolated context
       // enableRemoteModule deprecated in Electron 20+
       sandbox: true,                    // RECOMMENDED: Enable sandboxing
-      preload: path.join(__dirname, 'preload.js'), // Secure IPC bridge (will be built from preload.ts)
+      preload: path.join(__dirname, '..', 'preload', 'index.cjs'), // Secure IPC bridge (built from preload.ts as CommonJS)
       
       // Additional security settings
       webSecurity: true,                // Enable web security
