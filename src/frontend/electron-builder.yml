@@ -1,0 +1,48 @@
+appId: com.knowledgenetwork.app
+productName: KnowledgeNetwork
+directories:
+  buildResources: build
+  output: dist
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml,package-lock.json.backup}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+# Include only the platform-specific modules we actually need
+asarUnpack:
+  - resources/**
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  executableName: KnowledgeNetwork
+  # Disable code signing for development builds
+  forceCodeSigning: false
+  signAndEditExecutable: false
+nsis:
+  artifactName: ${productName}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+dmg:
+  artifactName: ${productName}-${version}.${ext}
+linux:
+  target:
+    - AppImage
+    - deb
+  maintainer: knowledgenetwork.dev
+  category: Utility
+appImage:
+  artifactName: ${productName}-${version}.${ext}
+npmRebuild: false
