@@ -9,12 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Register our analysis services with dependency injection
-// Core analyzer services (focused, testable components)
-builder.Services.AddScoped<IRoslynOperationExtractor, RoslynOperationExtractor>();
-builder.Services.AddScoped<ICfgStructureBuilder, CfgStructureBuilder>();
+// Core analyzer services (refined 2-step pipeline)
+builder.Services.AddScoped<IRoslynCfgExtractor, RoslynCfgExtractor>();
 builder.Services.AddScoped<IDomainModelConverter, DomainModelConverter>();
 
-// Main analyzer (composed from the three services above)
+// Main analyzer (composed from the two services above)
 builder.Services.AddScoped<ICSharpMethodBlockAnalyzer, CSharpMethodBlockAnalyzer>();
 builder.Services.AddScoped<CSharpMethodBlockAnalyzer>(); // Keep concrete registration for backward compatibility
 

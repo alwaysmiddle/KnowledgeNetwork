@@ -140,6 +140,38 @@ public static class SampleCodeRepository
     public static string GetLoopMethods() => 
         LoadSample("ControlFlow", "Loop_Methods.cs");
 
+    // Edge case sample access methods
+    
+    /// <summary>
+    /// Get async methods edge cases
+    /// </summary>
+    public static string GetAsyncMethods() => 
+        LoadSample("EdgeCases", "Async_Methods.cs");
+
+    /// <summary>
+    /// Get exception handling edge cases
+    /// </summary>
+    public static string GetExceptionHandling() => 
+        LoadSample("EdgeCases", "Exception_Handling.cs");
+
+    /// <summary>
+    /// Get complex expressions edge cases
+    /// </summary>
+    public static string GetComplexExpressions() => 
+        LoadSample("EdgeCases", "Complex_Expressions.cs");
+
+    /// <summary>
+    /// Get control flow variations edge cases
+    /// </summary>
+    public static string GetControlFlowVariations() => 
+        LoadSample("EdgeCases", "Control_Flow_Variations.cs");
+
+    /// <summary>
+    /// Get method variations edge cases
+    /// </summary>
+    public static string GetMethodVariations() => 
+        LoadSample("EdgeCases", "Method_Variations.cs");
+
     /// <summary>
     /// Clear the internal code cache (useful for testing)
     /// </summary>

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
+using KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 using KnowledgeNetwork.Domains.Code.Models.Enums;
 using KnowledgeNetwork.Tests.Shared;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -15,21 +16,18 @@ public class CSharpMethodBlockAnalyzerTests
 
     public CSharpMethodBlockAnalyzerTests()
     {
-        // Create logger instances for all services
-        var operationExtractorLogger = NullLogger<RoslynOperationExtractor>.Instance;
-        var cfgBuilderLogger = NullLogger<CfgStructureBuilder>.Instance;
+        // Create logger instances for the refined 2-step pipeline
+        var cfgExtractorLogger = NullLogger<RoslynCfgExtractor>.Instance;
         var domainConverterLogger = NullLogger<DomainModelConverter>.Instance;
         var analyzerLogger = NullLogger<CSharpMethodBlockAnalyzer>.Instance;
 
         // Create the composed services that the analyzer depends on
-        var operationExtractor = new RoslynOperationExtractor(operationExtractorLogger);
-        var cfgBuilder = new CfgStructureBuilder(cfgBuilderLogger);
+        IRoslynCfgExtractor cfgExtractor = new RoslynCfgExtractor(cfgExtractorLogger);
         var domainConverter = new DomainModelConverter(domainConverterLogger);
 
         // Create the main analyzer with its dependencies
         _analyzer = new CSharpMethodBlockAnalyzer(
-            operationExtractor,
-            cfgBuilder,
+            cfgExtractor,
             domainConverter,
             analyzerLogger);
     }

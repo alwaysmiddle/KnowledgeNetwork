@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
+using KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 using KnowledgeNetwork.Tests.Shared;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -15,7 +16,7 @@ namespace KnowledgeNetwork.Domains.Code.Tests.Unit.Analyzers.Blocks;
 /// </summary>
 public class RoslynCfgExtractorTests
 {
-    private readonly RoslynCfgExtractor _extractor;
+    private readonly IRoslynCfgExtractor _extractor;
     private readonly TestLogger<RoslynCfgExtractor> _testLogger;
 
     public RoslynCfgExtractorTests()

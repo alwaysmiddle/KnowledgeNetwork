@@ -8,39 +8,34 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
 
 /// <summary>
 /// Analyzer for extracting basic block-level control flow graphs from individual C# methods.
-/// This analyzer coordinates three focused services to provide clean separation of concerns:
-/// - RoslynOperationExtractor: Handles Roslyn operation extraction complexity
-/// - CfgStructureBuilder: Wraps ControlFlowGraph.Create with error handling
-/// - DomainModelConverter: Converts Roslyn CFG to our domain model
+/// This analyzer coordinates two focused services for method-level CFG analysis:
+/// - IRoslynCfgExtractor: Handles direct method-to-CFG extraction using Roslyn APIs
+/// - IDomainModelConverter: Converts Roslyn CFG to our domain model
 /// </summary>
 public class CSharpMethodBlockAnalyzer : ICSharpMethodBlockAnalyzer
 {
-    private readonly IRoslynOperationExtractor _operationExtractor;
-    private readonly ICfgStructureBuilder _cfgBuilder;
+    private readonly IRoslynCfgExtractor _cfgExtractor;
     private readonly IDomainModelConverter _domainConverter;
     private readonly ILogger<CSharpMethodBlockAnalyzer> _logger;
 
     /// <summary>
     /// Initializes a new instance of the CSharpMethodBlockAnalyzer with composed services
     /// </summary>
-    /// <param name="operationExtractor">Service for extracting IBlockOperation from syntax</param>
-    /// <param name="cfgBuilder">Service for building ControlFlowGraph structures</param>
+    /// <param name="cfgExtractor">Service for extracting ControlFlowGraph directly from methods</param>
     /// <param name="domainConverter">Service for converting to domain models</param>
     /// <param name="logger">Logger instance for diagnostic output</param>
     public CSharpMethodBlockAnalyzer(
-        IRoslynOperationExtractor operationExtractor,
-        ICfgStructureBuilder cfgBuilder,
+        IRoslynCfgExtractor cfgExtractor,
         IDomainModelConverter domainConverter,
         ILogger<CSharpMethodBlockAnalyzer> logger)
     {
-        _operationExtractor = operationExtractor ?? throw new ArgumentNullException(nameof(operationExtractor));
-        _cfgBuilder = cfgBuilder ?? throw new ArgumentNullException(nameof(cfgBuilder));
+        _cfgExtractor = cfgExtractor ?? throw new ArgumentNullException(nameof(cfgExtractor));
         _domainConverter = domainConverter ?? throw new ArgumentNullException(nameof(domainConverter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
-    /// Extract control flow graph from a method body using composed services
+    /// Extract control flow graph from a method body using the refined 2-step pipeline
     /// </summary>
     /// <param name="compilation">Compilation context</param>
     /// <param name="methodDeclaration">Method syntax node</param>
@@ -53,25 +48,16 @@ public class CSharpMethodBlockAnalyzer : ICSharpMethodBlockAnalyzer
         {
             _logger.LogDebug("Processing method {MethodName} for CFG extraction", methodDeclaration.Identifier);
 
-            // Phase 1: Extract IBlockOperation using specialized service
-            var blockOperation = await _operationExtractor.ExtractFromMethodAsync(compilation, methodDeclaration);
-            if (blockOperation == null)
-            {
-                _logger.LogDebug("No valid block operation extracted for method {MethodName}", 
-                    methodDeclaration.Identifier);
-                return null;
-            }
-
-            // Phase 2: Build ControlFlowGraph structure using specialized service
-            var cfg = await _cfgBuilder.BuildStructureAsync(blockOperation, methodDeclaration.Identifier.ValueText);
+            // Phase 1: Extract ControlFlowGraph directly from method using RoslynCfgExtractor
+            var cfg = await _cfgExtractor.ExtractControlFlowGraphAsync(compilation, methodDeclaration);
             if (cfg == null)
             {
-                _logger.LogWarning("CFG structure building failed for method {MethodName}", 
+                _logger.LogDebug("No valid CFG extracted for method {MethodName}", 
                     methodDeclaration.Identifier);
                 return null;
             }
 
-            // Phase 3: Convert to domain model using specialized service
+            // Phase 2: Convert to domain model using specialized service
             var semanticModel = compilation.GetSemanticModel(methodDeclaration.SyntaxTree);
             var methodSymbol = semanticModel.GetDeclaredSymbol(methodDeclaration);
             if (methodSymbol == null)
@@ -156,7 +142,7 @@ public class CSharpMethodBlockAnalyzer : ICSharpMethodBlockAnalyzer
     #region Private Helper Methods
 
     /// <summary>
-    /// Extract CFG from constructor declaration using composed services
+    /// Extract CFG from constructor declaration using the refined 2-step pipeline
     /// </summary>
     private async Task<MethodBlockGraph?> ExtractControlFlowFromConstructorAsync(
         Compilation compilation,
@@ -166,23 +152,15 @@ public class CSharpMethodBlockAnalyzer : ICSharpMethodBlockAnalyzer
         {
             _logger.LogDebug("Processing constructor for CFG extraction");
 
-            // Phase 1: Extract IBlockOperation using specialized service
-            var blockOperation = await _operationExtractor.ExtractFromConstructorAsync(compilation, constructorDeclaration);
-            if (blockOperation == null)
-            {
-                _logger.LogDebug("No valid block operation extracted for constructor");
-                return null;
-            }
-
-            // Phase 2: Build ControlFlowGraph structure using specialized service
-            var cfg = await _cfgBuilder.BuildStructureAsync(blockOperation, ".ctor");
+            // Phase 1: Extract ControlFlowGraph directly from constructor using RoslynCfgExtractor
+            var cfg = await _cfgExtractor.ExtractControlFlowGraphAsync(compilation, constructorDeclaration);
             if (cfg == null)
             {
-                _logger.LogWarning("CFG structure building failed for constructor");
+                _logger.LogDebug("No valid CFG extracted for constructor");
                 return null;
             }
 
-            // Phase 3: Convert to domain model using specialized constructor service
+            // Phase 2: Convert to domain model using specialized constructor service
             var semanticModel = compilation.GetSemanticModel(constructorDeclaration.SyntaxTree);
             var constructorSymbol = semanticModel.GetDeclaredSymbol(constructorDeclaration);
             if (constructorSymbol == null)

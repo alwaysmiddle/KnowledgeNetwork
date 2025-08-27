@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
+using KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 using KnowledgeNetwork.Tests.Shared;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -15,7 +16,7 @@ namespace KnowledgeNetwork.Domains.Code.Tests.Unit.Analyzers.Blocks;
 public class DomainModelConverterTests
 {
     private readonly DomainModelConverter _converter;
-    private readonly RoslynCfgExtractor _cfgExtractor;
+    private readonly IRoslynCfgExtractor _cfgExtractor;
     private readonly TestLogger<DomainModelConverter> _testLogger;
     private readonly TestLogger<RoslynCfgExtractor> _cfgLogger;
 
@@ -47,10 +48,24 @@ public class DomainModelConverterTests
         var methodSymbol = semanticModel.GetDeclaredSymbol(method);
         methodSymbol.ShouldNotBeNull("Method symbol should be available");
 
-        // TODO(human): Implement the test validation
-        // Context: We have a working CFG and method symbol for a simple linear method. The DomainModelConverter should create a MethodBlockGraph with proper blocks, edges, and metadata.
-        // Your Task: Add test logic to: 1) Call ConvertToDomainModelAsync with the CFG, method syntax, and symbol, 2) Validate the resulting MethodBlockGraph has correct method name and type, 3) Check that basic blocks are properly converted, 4) Verify entry/exit blocks are identified, 5) Ensure complexity metrics are calculated
-        // Guidance: Use Shouldly assertions like .ShouldNotBeNull(), .ShouldBe(), .ShouldBeGreaterThan(). Focus on the most important conversion aspects rather than testing every detail.
+        // Act - Convert CFG to domain model
+        var domainModel = await _converter.ConvertToDomainModelAsync(cfg, method, methodSymbol);
+
+        // Assert - Validate domain model conversion
+        domainModel.ShouldNotBeNull("DomainModelConverter should create MethodBlockGraph");
+        domainModel.MethodName.ShouldBe("SimpleLinearMethods.SimpleMethod()", "Method name should be fully qualified with signature");
+        
+        // Validate basic block conversion
+        domainModel.BasicBlocks.ShouldNotBeEmpty("Domain model should have basic blocks from CFG");
+        domainModel.BasicBlocks.Count.ShouldBeGreaterThan(0, "Should have at least one basic block");
+        
+        // Validate entry/exit block identification
+        domainModel.EntryBlock.ShouldNotBeNull("Entry block should be identified");
+        domainModel.ExitBlock.ShouldNotBeNull("Exit block should be identified");
+        
+        // Validate complexity metrics calculation
+        domainModel.Metrics.ShouldNotBeNull("Complexity metrics should be calculated");
+        domainModel.Metrics.CyclomaticComplexity.ShouldBe(1, "Simple linear method should have complexity of 1");
     }
 
     [Fact]

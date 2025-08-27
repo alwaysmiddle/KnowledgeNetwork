@@ -1,3 +1,4 @@
+using KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FlowAnalysis;
@@ -10,7 +11,7 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
 /// Extracts ControlFlowGraph directly from C# method declarations using Roslyn APIs.
 /// Combines operation extraction and CFG creation in one cohesive service.
 /// </summary>
-public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger)
+public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfgExtractor
 {
     private readonly ILogger<RoslynCfgExtractor> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
