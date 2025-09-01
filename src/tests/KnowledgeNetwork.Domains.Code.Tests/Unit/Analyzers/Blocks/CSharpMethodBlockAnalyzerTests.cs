@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
 using KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;

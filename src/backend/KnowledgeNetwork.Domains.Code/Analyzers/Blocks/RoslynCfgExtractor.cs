@@ -21,9 +21,7 @@ public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfg
     /// <param name="compilation">Compilation context</param>
     /// <param name="methodDeclaration">Method syntax node</param>
     /// <returns>ControlFlowGraph or null if extraction fails</returns>
-    public async Task<ControlFlowGraph?> ExtractControlFlowGraphAsync(
-        Compilation compilation,
-        MethodDeclarationSyntax methodDeclaration)
+    public async Task<ControlFlowGraph?> ExtractControlFlowGraphAsync(Compilation compilation, MethodDeclarationSyntax methodDeclaration)
     {
         ArgumentNullException.ThrowIfNull(compilation);
         ArgumentNullException.ThrowIfNull(methodDeclaration);
@@ -37,7 +35,7 @@ public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfg
             // Phase 1: Get semantic model and validate method symbol
             var semanticModel = compilation.GetSemanticModel(methodDeclaration.SyntaxTree);
             var methodSymbol = semanticModel.GetDeclaredSymbol(methodDeclaration);
-            if (methodSymbol == null)
+            if (methodSymbol is null)
             {
                 _logger.LogWarning("Failed to get method symbol for {MethodName}", methodDeclaration.Identifier);
                 return null;
@@ -53,22 +51,22 @@ public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfg
             }
 
             // Validate that we have a block body (not expression body for now)
-            if (methodBody.BlockBody == null)
+            if (methodBody.BlockBody is null && methodDeclaration.ExpressionBody is null)
             {
-                _logger.LogDebug("Method {MethodName} has no block body (possibly expression-bodied)", 
+                _logger.LogDebug("Method {MethodName} has no body, skipping CFG creation",
                     methodDeclaration.Identifier);
                 return null;
             }
 
             // Phase 3: Create ControlFlowGraph from the root method body operation
-            _logger.LogDebug("Creating CFG from IMethodBodyOperation for method {MethodName}", 
+            _logger.LogDebug("Creating CFG from IMethodBodyOperation for method {MethodName}",
                 methodDeclaration.Identifier);
 
             var cfg = ControlFlowGraph.Create(methodBody);
-            
-            if (cfg == null)
+
+            if (cfg is null) //Defensive Programming, Microsoft could return null one day for edge cases.
             {
-                _logger.LogWarning("ControlFlowGraph.Create returned null for method {MethodName}", 
+                _logger.LogWarning("ControlFlowGraph.Create returned null for method {MethodName}",
                     methodDeclaration.Identifier);
                 return null;
             }
@@ -80,19 +78,19 @@ public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfg
         }
         catch (ArgumentException ex)
         {
-            _logger.LogError(ex, "Invalid operation provided to ControlFlowGraph.Create for method {MethodName}", 
+            _logger.LogError(ex, "Invalid operation provided to ControlFlowGraph.Create for method {MethodName}",
                 methodDeclaration.Identifier);
             return null;
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Invalid operation structure for CFG creation in method {MethodName}", 
+            _logger.LogError(ex, "Invalid operation structure for CFG creation in method {MethodName}",
                 methodDeclaration.Identifier);
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during CFG extraction for method {MethodName}", 
+            _logger.LogError(ex, "Unexpected error during CFG extraction for method {MethodName}",
                 methodDeclaration.Identifier);
             return null;
         }
@@ -104,13 +102,11 @@ public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfg
     /// <param name="compilation">Compilation context</param>
     /// <param name="constructorDeclaration">Constructor syntax node</param>
     /// <returns>ControlFlowGraph or null if extraction fails</returns>
-    public async Task<ControlFlowGraph?> ExtractControlFlowGraphAsync(
-        Compilation compilation,
-        ConstructorDeclarationSyntax constructorDeclaration)
+    public async Task<ControlFlowGraph?> ExtractControlFlowGraphAsync(Compilation compilation, ConstructorDeclarationSyntax constructorDeclaration)
     {
         ArgumentNullException.ThrowIfNull(compilation);
         ArgumentNullException.ThrowIfNull(constructorDeclaration);
-
+        
         await Task.CompletedTask; // Maintain async signature
 
         try
@@ -119,25 +115,24 @@ public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfg
 
             var semanticModel = compilation.GetSemanticModel(constructorDeclaration.SyntaxTree);
             var constructorSymbol = semanticModel.GetDeclaredSymbol(constructorDeclaration);
-            if (constructorSymbol == null)
+            if (constructorSymbol is null)
             {
-                _logger.LogWarning("Failed to get constructor symbol for {ConstructorName}", 
-                    constructorDeclaration.Identifier);
+                _logger.LogWarning("Failed to get constructor symbol for {ConstructorName}", constructorDeclaration.Identifier);
                 return null;
             }
 
             var constructorBodyOperation = semanticModel.GetOperation(constructorDeclaration);
             if (constructorBodyOperation is not IConstructorBodyOperation constructorBody)
             {
-                _logger.LogWarning("Constructor {ConstructorName} did not produce IConstructorBodyOperation. Got: {OperationType}",
+                _logger.LogWarning(
+                    "Constructor {ConstructorName} did not produce IConstructorBodyOperation. Got: {OperationType}",
                     constructorDeclaration.Identifier, constructorBodyOperation?.GetType().Name ?? "null");
                 return null;
             }
 
-            if (constructorBody.BlockBody == null)
+            if (constructorBody.BlockBody is null)
             {
-                _logger.LogDebug("Constructor {ConstructorName} has no block body", 
-                    constructorDeclaration.Identifier);
+                _logger.LogDebug("Constructor {ConstructorName} has no block body", constructorDeclaration.Identifier);
                 return null;
             }
 
@@ -145,10 +140,10 @@ public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfg
                 constructorDeclaration.Identifier);
 
             var cfg = ControlFlowGraph.Create(constructorBody);
-            
-            if (cfg == null)
+
+            if (cfg is null)
             {
-                _logger.LogWarning("ControlFlowGraph.Create returned null for constructor {ConstructorName}", 
+                _logger.LogWarning("ControlFlowGraph.Create returned null for constructor {ConstructorName}",
                     constructorDeclaration.Identifier);
                 return null;
             }
@@ -160,7 +155,7 @@ public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfg
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during CFG extraction for constructor {ConstructorName}", 
+            _logger.LogError(ex, "Error during CFG extraction for constructor {ConstructorName}",
                 constructorDeclaration.Identifier);
             return null;
         }

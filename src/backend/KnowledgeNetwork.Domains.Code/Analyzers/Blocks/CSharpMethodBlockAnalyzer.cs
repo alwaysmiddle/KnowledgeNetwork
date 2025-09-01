@@ -100,10 +100,10 @@ public class CSharpMethodBlockAnalyzer : ICSharpMethodBlockAnalyzer
             // Find all method declarations
             var methods = root.DescendantNodes()
                 .OfType<MethodDeclarationSyntax>()
-                .Where(m => m.Body != null || m.ExpressionBody != null);
+                .Where(m => m.Body != null || m.ExpressionBody != null)
+                .ToList();
 
-            var methodCount = methods.Count();
-            _logger.LogDebug("Found {MethodCount} methods to analyze", methodCount);
+            _logger.LogDebug("Found {MethodCount} methods to analyze", methods.Count);
 
             // Extract CFG for each method using the main extraction method
             foreach (var method in methods)
@@ -118,7 +118,8 @@ public class CSharpMethodBlockAnalyzer : ICSharpMethodBlockAnalyzer
             // Also handle constructors using specialized extraction
             var constructors = root.DescendantNodes()
                 .OfType<ConstructorDeclarationSyntax>()
-                .Where(c => c.Body != null || c.ExpressionBody != null);
+                .Where(c => c.Body != null || c.ExpressionBody != null)
+                .ToList();
 
             foreach (var constructor in constructors)
             {
@@ -138,8 +139,6 @@ public class CSharpMethodBlockAnalyzer : ICSharpMethodBlockAnalyzer
             return cfgs; // Return partial results
         }
     }
-
-    #region Private Helper Methods
 
     /// <summary>
     /// Extract CFG from constructor declaration using the refined 2-step pipeline
@@ -182,6 +181,4 @@ public class CSharpMethodBlockAnalyzer : ICSharpMethodBlockAnalyzer
             return null;
         }
     }
-
-    #endregion
 }

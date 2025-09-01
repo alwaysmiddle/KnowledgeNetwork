@@ -77,7 +77,7 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
             }
 
             // Create edges based on actual Roslyn CFG structure
-            CreateControlFlowEdges(cfg, blockMap, domainCfg);
+            CreateControlFlowEdges(blockMap, domainCfg);
 
             // Calculate reachability
             CalculateReachability(domainCfg);
@@ -167,7 +167,7 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
     /// <summary>
     /// Create control flow edges based on Roslyn CFG structure
     /// </summary>
-    private void CreateControlFlowEdges(ControlFlowGraph cfg, Dictionary<BasicBlock, CSharpBasicBlock> blockMap, MethodBlockGraph domainCfg)
+    private void CreateControlFlowEdges(Dictionary<BasicBlock, CSharpBasicBlock> blockMap, MethodBlockGraph domainCfg)
     {
         foreach (var kvp in blockMap)
         {

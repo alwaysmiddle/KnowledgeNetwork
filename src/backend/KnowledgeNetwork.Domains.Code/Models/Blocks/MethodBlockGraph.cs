@@ -22,12 +22,12 @@ public class MethodBlockGraph
     /// <summary>
     /// Fully qualified name of the containing type
     /// </summary>
-    public string TypeName { get; set; } = string.Empty;
+    public string TypeName { get; init; } = string.Empty;
 
     /// <summary>
     /// All basic blocks in this control flow graph
     /// </summary>
-    public List<CSharpBasicBlock> BasicBlocks { get; set; } = new();
+    public List<CSharpBasicBlock> BasicBlocks { get; set; } = [];
 
     /// <summary>
     /// Entry block (where execution begins)
@@ -42,7 +42,7 @@ public class MethodBlockGraph
     /// <summary>
     /// Control flow edges between basic blocks
     /// </summary>
-    public List<CSharpControlFlowEdge> Edges { get; set; } = new();
+    public List<CSharpControlFlowEdge> Edges { get; set; } = [];
 
     /// <summary>
     /// Complexity metrics for this CFG
@@ -131,7 +131,7 @@ public class MethodBlockGraph
         // Check for orphaned blocks (except entry)
         foreach (var block in BasicBlocks.Where(b => b.Kind != CSharpBasicBlockKind.Entry))
         {
-            if (!Edges.Any(e => e.Target == block.Id))
+            if (Edges.All(e => e.Target != block.Id))
             {
                 errors.Add($"Block {block.Id} has no incoming edges");
             }
