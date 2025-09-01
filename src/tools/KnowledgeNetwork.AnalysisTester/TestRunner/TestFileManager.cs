@@ -10,7 +10,7 @@ public class TestFileManager
     /// <summary>
     /// Discover test files matching patterns in a directory
     /// </summary>
-    public List<string> DiscoverTestFiles(string directory, string[] patterns)
+    public static List<string> DiscoverTestFiles(string directory, string[] patterns)
     {
         var files = new List<string>();
 
@@ -174,45 +174,5 @@ public class TestFileManager
                 kvp => kvp.Value.Count),
             SupportedFiles = FilterSupportedFiles(files, new[] { "csharp" }).Count
         };
-    }
-}
-
-/// <summary>
-/// File metadata information
-/// </summary>
-public class FileMetadata
-{
-    public string FileName { get; set; } = string.Empty;
-    public string FullPath { get; set; } = string.Empty;
-    public string Extension { get; set; } = string.Empty;
-    public long SizeBytes { get; set; }
-    public DateTime LastModified { get; set; }
-    public string Language { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// Directory analysis statistics
-/// </summary>
-public class DirectoryStatistics
-{
-    public int TotalFiles { get; set; }
-    public long TotalSizeBytes { get; set; }
-    public int TotalLines { get; set; }
-    public Dictionary<string, int> FilesByLanguage { get; set; } = new();
-    public int SupportedFiles { get; set; }
-    
-    public string TotalSizeFormatted => FormatBytes(TotalSizeBytes);
-    
-    private static string FormatBytes(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len = len / 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
     }
 }

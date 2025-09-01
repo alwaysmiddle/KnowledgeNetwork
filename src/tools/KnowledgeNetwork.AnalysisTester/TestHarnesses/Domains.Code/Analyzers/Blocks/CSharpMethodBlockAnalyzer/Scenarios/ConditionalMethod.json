@@ -1,0 +1,26 @@
+{
+  "name": "Method With Conditional", 
+  "description": "Tests CFG analysis for a method with if-statement",
+  "component": "CSharpMethodBlockAnalyzer",
+  "input": {
+    "codeFile": "TestData/CodeSamples/Simple/BasicCalculator.cs",
+    "className": "BasicCalculator", 
+    "methodName": "SafeDivide",
+    "options": {
+      "includeMetrics": true,
+      "verboseOutput": true
+    }
+  },
+  "expectedOutput": {
+    "nodeCount": 4,
+    "edgeCount": 4, 
+    "cyclomaticComplexity": 2,
+    "hasLoops": false,
+    "hasConditionals": true
+  },
+  "validationRules": [
+    "nodeCount >= 3",
+    "cyclomaticComplexity >= 2",
+    "hasConditionals == true"
+  ]
+}

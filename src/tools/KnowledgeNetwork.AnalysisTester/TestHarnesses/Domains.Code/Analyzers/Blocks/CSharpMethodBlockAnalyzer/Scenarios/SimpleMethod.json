@@ -1,0 +1,26 @@
+{
+  "name": "Simple Linear Method",
+  "description": "Tests CFG analysis for a simple method with no control flow",
+  "component": "CSharpMethodBlockAnalyzer", 
+  "input": {
+    "codeFile": "TestData/CodeSamples/Simple/BasicCalculator.cs",
+    "className": "BasicCalculator",
+    "methodName": "Add",
+    "options": {
+      "includeMetrics": true,
+      "verboseOutput": true
+    }
+  },
+  "expectedOutput": {
+    "nodeCount": 3,
+    "edgeCount": 2,
+    "cyclomaticComplexity": 1,
+    "hasLoops": false,
+    "hasConditionals": false
+  },
+  "validationRules": [
+    "nodeCount >= 2",
+    "edgeCount >= 1", 
+    "cyclomaticComplexity >= 1"
+  ]
+}
