@@ -62,17 +62,15 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
                 domainCfg.EntryBlock = entryBlock;
 
                 // Find exit blocks (blocks with no successors or special exit blocks)
-                foreach (var kvp in blockMap)
+                foreach (var domainBlock in from 
+                             kvp in blockMap 
+                         let roslynBlock = kvp.Key 
+                         let domainBlock = kvp.Value 
+                         where roslynBlock.ConditionalSuccessor == null 
+                               && roslynBlock.FallThroughSuccessor == null select domainBlock)
                 {
-                    var roslynBlock = kvp.Key;
-                    var domainBlock = kvp.Value;
-
-                    // Check if this is an exit block (no successors)
-                    if (roslynBlock.ConditionalSuccessor == null && roslynBlock.FallThroughSuccessor == null)
-                    {
-                        domainBlock.Kind = CSharpBasicBlockKind.Exit;
-                        domainCfg.ExitBlock = domainBlock; // Use the last one found
-                    }
+                    domainBlock.Kind = CSharpBasicBlockKind.Exit;
+                    domainCfg.ExitBlock = domainBlock; // Use the last one found
                 }
             }
 
@@ -127,9 +125,8 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
         };
 
         // Convert operations
-        foreach (var operation in block.Operations)
+        foreach (var operationInfo in block.Operations.Select(CreateOperationInfo))
         {
-            var operationInfo = CreateOperationInfo(operation);
             domainBlock.Operations.Add(operationInfo);
         }
 
@@ -165,33 +162,28 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
     /// <summary>
     /// Create control flow edges based on Roslyn CFG structure
     /// </summary>
-    private void CreateControlFlowEdges(Dictionary<BasicBlock, CSharpBasicBlock> blockMap, MethodBlockGraph domainCfg)
+    private static void CreateControlFlowEdges(Dictionary<BasicBlock, CSharpBasicBlock> blockMap, MethodBlockGraph domainCfg)
     {
-        foreach (var kvp in blockMap)
+        foreach (var (roslynBlock, sourceBlock) in blockMap)
         {
-            var roslynBlock = kvp.Key;
-            var sourceBlock = kvp.Value;
-
             // Add fall-through successor
-            if (roslynBlock.FallThroughSuccessor != null && roslynBlock.FallThroughSuccessor.Destination != null &&
-                blockMap.ContainsKey(roslynBlock.FallThroughSuccessor.Destination))
+            if (roslynBlock.FallThroughSuccessor is { Destination: not null } &&
+                blockMap.TryGetValue(roslynBlock.FallThroughSuccessor.Destination, out var targetBlock1))
             {
-                var targetBlock = blockMap[roslynBlock.FallThroughSuccessor.Destination];
-                var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
+                var edge = CreateControlFlowEdge(sourceBlock, targetBlock1);
                 edge.Kind = CSharpEdgeKind.Regular;
                 edge.Label = "fallthrough";
 
                 domainCfg.Edges.Add(edge);
-                sourceBlock.Successors.Add(targetBlock.Id);
-                targetBlock.Predecessors.Add(sourceBlock.Id);
+                sourceBlock.Successors.Add(targetBlock1.Id);
+                targetBlock1.Predecessors.Add(sourceBlock.Id);
             }
 
             // Add conditional successor
-            if (roslynBlock.ConditionalSuccessor != null && roslynBlock.ConditionalSuccessor.Destination != null &&
-                blockMap.ContainsKey(roslynBlock.ConditionalSuccessor.Destination))
+            if (roslynBlock.ConditionalSuccessor is not { Destination: not null } ||
+                !blockMap.TryGetValue(roslynBlock.ConditionalSuccessor.Destination, out var targetBlock2)) continue;
             {
-                var targetBlock = blockMap[roslynBlock.ConditionalSuccessor.Destination];
-                var edge = CreateControlFlowEdge(sourceBlock, targetBlock);
+                var edge = CreateControlFlowEdge(sourceBlock, targetBlock2);
                 edge.Kind = CSharpEdgeKind.ConditionalTrue;
                 edge.Label = "condition";
 
@@ -205,8 +197,8 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
                 }
 
                 domainCfg.Edges.Add(edge);
-                sourceBlock.Successors.Add(targetBlock.Id);
-                targetBlock.Predecessors.Add(sourceBlock.Id);
+                sourceBlock.Successors.Add(targetBlock2.Id);
+                targetBlock2.Predecessors.Add(sourceBlock.Id);
             }
         }
     }
@@ -214,7 +206,7 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
     /// <summary>
     /// Create control flow edge
     /// </summary>
-    private CSharpControlFlowEdge CreateControlFlowEdge(CSharpBasicBlock source, CSharpBasicBlock target)
+    private static CSharpControlFlowEdge CreateControlFlowEdge(CSharpBasicBlock source, CSharpBasicBlock target)
     {
         var edge = new CSharpControlFlowEdge
         {
@@ -251,7 +243,7 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
     /// <summary>
     /// Calculate reachability from entry block
     /// </summary>
-    private void CalculateReachability(MethodBlockGraph cfg)
+    private static void CalculateReachability(MethodBlockGraph cfg)
     {
         if (cfg.EntryBlock == null) return;
 
@@ -265,18 +257,12 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
         {
             var blockId = queue.Dequeue();
             var block = cfg.GetBlock(blockId);
-            if (block != null)
-            {
-                block.IsReachable = true;
+            if (block == null) continue;
+            block.IsReachable = true;
 
-                foreach (var successorId in block.Successors)
-                {
-                    if (!visited.Contains(successorId))
-                    {
-                        visited.Add(successorId);
-                        queue.Enqueue(successorId);
-                    }
-                }
+            foreach (var successorId in block.Successors.Where(successorId => visited.Add(successorId)))
+            {
+                queue.Enqueue(successorId);
             }
         }
     }
@@ -284,7 +270,7 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
     /// <summary>
     /// Calculate complexity metrics for the CFG
     /// </summary>
-    private CSharpComplexityMetrics CalculateComplexityMetrics(MethodBlockGraph cfg)
+    private static CSharpComplexityMetrics CalculateComplexityMetrics(MethodBlockGraph cfg)
     {
         var metrics = new CSharpComplexityMetrics
         {
@@ -292,8 +278,7 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
             EdgeCount = cfg.Edges.Count,
             // Count decision points (conditional branches)
             DecisionPoints = cfg.Edges.Count(e =>
-                e.Kind == CSharpEdgeKind.ConditionalTrue ||
-                e.Kind == CSharpEdgeKind.ConditionalFalse),
+                e.Kind is CSharpEdgeKind.ConditionalTrue or CSharpEdgeKind.ConditionalFalse),
             // Count loops (back edges)
             LoopCount = cfg.Edges.Count(e => e.Kind == CSharpEdgeKind.BackEdge),
             // Calculate cyclomatic complexity: Edges - Nodes + 2
