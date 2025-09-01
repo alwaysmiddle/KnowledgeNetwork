@@ -114,8 +114,6 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
         return result;
     }
 
-    #region Private Helper Methods
-
     /// <summary>
     /// Convert Roslyn BasicBlock to our domain model
     /// </summary>
@@ -291,28 +289,23 @@ public class DomainModelConverter(ILogger<DomainModelConverter> logger) : IDomai
         var metrics = new CSharpComplexityMetrics
         {
             BlockCount = cfg.BasicBlocks.Count,
-            EdgeCount = cfg.Edges.Count
+            EdgeCount = cfg.Edges.Count,
+            // Count decision points (conditional branches)
+            DecisionPoints = cfg.Edges.Count(e =>
+                e.Kind == CSharpEdgeKind.ConditionalTrue ||
+                e.Kind == CSharpEdgeKind.ConditionalFalse),
+            // Count loops (back edges)
+            LoopCount = cfg.Edges.Count(e => e.Kind == CSharpEdgeKind.BackEdge),
+            // Calculate cyclomatic complexity: Edges - Nodes + 2
+            CyclomaticComplexity = Math.Max(1, cfg.Edges.Count - cfg.BasicBlocks.Count + 2),
+            // Check for exception handling
+            HasExceptionHandling = cfg.BasicBlocks.Any(b => b.Kind == CSharpBasicBlockKind.ExceptionHandler) ||
+                                   cfg.Edges.Any(e => e.Kind == CSharpEdgeKind.Exception)
         };
-
-        // Count decision points (conditional branches)
-        metrics.DecisionPoints = cfg.Edges.Count(e =>
-            e.Kind == CSharpEdgeKind.ConditionalTrue ||
-            e.Kind == CSharpEdgeKind.ConditionalFalse);
-
-        // Count loops (back edges)
-        metrics.LoopCount = cfg.Edges.Count(e => e.Kind == CSharpEdgeKind.BackEdge);
-
-        // Calculate cyclomatic complexity: Edges - Nodes + 2
-        metrics.CyclomaticComplexity = Math.Max(1, cfg.Edges.Count - cfg.BasicBlocks.Count + 2);
-
-        // Check for exception handling
-        metrics.HasExceptionHandling = cfg.BasicBlocks.Any(b => b.Kind == CSharpBasicBlockKind.ExceptionHandler) ||
-                                       cfg.Edges.Any(e => e.Kind == CSharpEdgeKind.Exception);
 
         return metrics;
     }
 
-    #endregion
     
     /// <summary>
     /// Get human-readable operation summary

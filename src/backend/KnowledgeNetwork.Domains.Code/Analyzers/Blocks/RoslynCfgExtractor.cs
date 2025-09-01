@@ -130,9 +130,11 @@ public class RoslynCfgExtractor(ILogger<RoslynCfgExtractor> logger) : IRoslynCfg
                 return null;
             }
 
-            if (constructorBody.BlockBody is null)
+            // Validate that we have either block body or expression body
+            if (constructorBody.BlockBody is null && constructorDeclaration.ExpressionBody is null)
             {
-                _logger.LogDebug("Constructor {ConstructorName} has no block body", constructorDeclaration.Identifier);
+                _logger.LogDebug("Constructor {ConstructorName} has no body, skipping CFG creation",
+                    constructorDeclaration.Identifier);
                 return null;
             }
 

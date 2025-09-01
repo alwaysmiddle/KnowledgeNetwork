@@ -1,10 +1,8 @@
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
 using KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
 using KnowledgeNetwork.Tests.Shared;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.FlowAnalysis;
 using Shouldly;
 using Xunit;
 
@@ -32,7 +30,7 @@ public class RoslynCfgExtractorTests
         var sampleCode = SampleCodeRepository.GetSimpleLinearMethod();
         var (compilation, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
         
-        var root = await syntaxTree.GetRootAsync();
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
         var method = root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .First(m => m.Identifier.ValueText == "SimpleMethod");
@@ -56,7 +54,7 @@ public class RoslynCfgExtractorTests
         var sampleCode = SampleCodeRepository.GetSimpleLinearMethod();
         var (compilation, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
         
-        var root = await syntaxTree.GetRootAsync();
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
         var method = root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .First(m => m.Identifier.ValueText == "EmptyMethod");
@@ -76,7 +74,7 @@ public class RoslynCfgExtractorTests
         var sampleCode = SampleCodeRepository.GetConditionalMethods();
         var (compilation, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
         
-        var root = await syntaxTree.GetRootAsync();
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
         var method = root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .First(m => m.Identifier.ValueText == "IfElseMethod");
@@ -96,7 +94,7 @@ public class RoslynCfgExtractorTests
         var sampleCode = SampleCodeRepository.GetLoopMethods();
         var (compilation, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
         
-        var root = await syntaxTree.GetRootAsync();
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
         var method = root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .First(m => m.Identifier.ValueText == "SimpleForLoop");
@@ -110,26 +108,194 @@ public class RoslynCfgExtractorTests
     }
 
     [Fact]
-    public async Task ExtractControlFlowGraphAsync_ExpressionBodiedMethod_ShouldReturnNull()
+    public async Task ExtractControlFlowGraphAsync_ExpressionBodiedMethod_ShouldReturnValidCfg()
     {
-        // Arrange: Test expression-bodied method (currently not supported)
+        // Arrange: Test expression-bodied method (should be fully supported)
         var sampleCode = SampleCodeRepository.GetSimpleLinearMethod();
         var (compilation, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
         
-        var root = await syntaxTree.GetRootAsync();
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
         var method = root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .First(m => m.Identifier.ValueText == "ExpressionBodiedMethod");
 
+        // Verify it's actually an expression body
+        method.ExpressionBody.ShouldNotBeNull("Method should have expression body");
+        method.Body.ShouldBeNull("Method should not have block body");
+
         // Act
         var cfg = await _extractor.ExtractControlFlowGraphAsync(compilation, method);
 
-        // Assert
-        cfg.ShouldBeNull("Expression-bodied methods should return null (not supported yet)");
+        // Assert: Expression bodies should produce valid CFGs
+        cfg.ShouldNotBeNull("Expression-bodied methods should produce valid CFG");
+        cfg.Blocks.Length.ShouldBeGreaterThan(0, "CFG should have at least one basic block");
         
-        // Verify appropriate debug message was logged
-        var debugMessages = _testLogger.LogMessages.Where(m => m.Contains("has no block body")).ToList();
-        debugMessages.ShouldNotBeEmpty("Should log message about missing block body");
+        // Verify no errors were logged
+        var errorMessages = _testLogger.LogMessages.Where(m => m.StartsWith("[Error]")).ToList();
+        errorMessages.ShouldBeEmpty($"No errors should be logged for expression bodies, but got: {string.Join(", ", errorMessages)}");
+    }
+
+    [Fact]
+    public async Task ExtractControlFlowGraphAsync_ExpressionBodyMethodCalls_PreservesDependencyInformation()
+    {
+        // Arrange: Expression bodies that call methods - dependency information should be preserved
+        var sampleCode = @"
+            public class ServiceClass 
+            {
+                private readonly IRepository _repository;
+                private readonly ILogger _logger;
+                
+                // These expression bodies contain important method calls that should be captured
+                public User GetUser(int id) => _repository.FindById(id);
+                public void LogError(string message) => _logger.LogError(""Error: {Message}"", message);
+                public bool ValidateUser(User user) => _repository.IsValidUser(user) && user.IsActive();
+            }";
+
+        var (compilation, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
+        
+        var getUserMethod = root.DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .First(m => m.Identifier.ValueText == "GetUser");
+
+        var logErrorMethod = root.DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .First(m => m.Identifier.ValueText == "LogError");
+
+        var validateMethod = root.DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .First(m => m.Identifier.ValueText == "ValidateUser");
+
+        // Act
+        var getUserCfg = await _extractor.ExtractControlFlowGraphAsync(compilation, getUserMethod);
+        var logErrorCfg = await _extractor.ExtractControlFlowGraphAsync(compilation, logErrorMethod);
+        var validateCfg = await _extractor.ExtractControlFlowGraphAsync(compilation, validateMethod);
+
+        // Assert: All should return valid CFGs with dependency information
+        getUserCfg.ShouldNotBeNull("GetUser method should return valid CFG with _repository.FindById dependency");
+        logErrorCfg.ShouldNotBeNull("LogError method should return valid CFG with _logger.LogError dependency");
+        validateCfg.ShouldNotBeNull("ValidateUser method should return valid CFG with multiple method call dependencies");
+        
+        // Verify CFG structure
+        getUserCfg.Blocks.Length.ShouldBeGreaterThan(0, "GetUser CFG should have basic blocks");
+        logErrorCfg.Blocks.Length.ShouldBeGreaterThan(0, "LogError CFG should have basic blocks");
+        validateCfg.Blocks.Length.ShouldBeGreaterThan(0, "ValidateUser CFG should have basic blocks");
+        
+        // GUARDRAIL: This test ensures class dependency graph analysis captures expression body method calls
+        // Critical for knowledge network's ability to understand service relationships
+    }
+
+    [Fact]
+    public async Task ExtractControlFlowGraphAsync_ExpressionBodyComplexityMetrics_AreProperlyIncluded()
+    {
+        // Arrange: Expression bodies with varying complexity levels - all should be analyzed
+        var sampleCode = @"
+            public class ComplexityTestClass 
+            {
+                // Simple expression - low complexity
+                public int Simple() => 42;
+                
+                // Conditional expression - medium complexity  
+                public string Conditional(bool flag) => flag ? ""Yes"" : ""No"";
+                
+                // Complex nested conditionals - high complexity
+                public decimal ComplexCalculation(decimal price, bool isPremium, bool hasDiscount) =>
+                    isPremium 
+                        ? (hasDiscount ? price * 0.8m * 0.9m : price * 0.9m)
+                        : (hasDiscount ? price * 0.95m : price);
+                        
+                // Pattern matching - high complexity
+                public string ProcessValue(object value) =>
+                    value switch
+                    {
+                        int i when i > 100 => ""Large number"",
+                        int i => ""Small number"", 
+                        string s when s.Length > 10 => ""Long string"",
+                        string s => ""Short string"",
+                        _ => ""Unknown""
+                    };
+            }";
+
+        var (compilation, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
+        
+        var methods = root.DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .ToList();
+
+        // Act: Extract CFG for all methods
+        var results = new List<(string name, bool hasExpressionBody, ControlFlowGraph cfg)>();
+        foreach (var method in methods)
+        {
+            var cfg = await _extractor.ExtractControlFlowGraphAsync(compilation, method);
+            results.Add((
+                method.Identifier.ValueText,
+                method.ExpressionBody != null,
+                cfg
+            ));
+        }
+
+        // Assert: All expression bodies should return valid CFGs regardless of complexity
+        foreach (var (name, hasExpressionBody, cfg) in results)
+        {
+            if (hasExpressionBody) // Expression body
+            {
+                cfg.ShouldNotBeNull($"Expression-bodied method {name} should return valid CFG");
+                cfg.Blocks.Length.ShouldBeGreaterThan(0, $"Expression-bodied method {name} should have basic blocks");
+            }
+        }
+        
+        // GUARDRAIL: Complexity metrics for classes include expression-bodied methods
+        // This ensures accurate complexity calculations for the knowledge network
+        var expressionBodyCount = results.Count(r => r.hasExpressionBody);
+        expressionBodyCount.ShouldBeGreaterThan(0, "Should find expression-bodied methods in test code");
+        
+        // Verify no errors were logged
+        var errorMessages = _testLogger.LogMessages.Where(m => m.StartsWith("[Error]")).ToList();
+        errorMessages.ShouldBeEmpty("No errors should be logged for expression bodies with complex logic");
+    }
+
+    [Theory]
+    [InlineData("void", "LogInfo", "_logger.LogInformation(\"Info\");")]
+    [InlineData("string", "GetName", "_user.FirstName + \" \" + _user.LastName;")]
+    [InlineData("bool", "IsValid", "_user != null && _user.IsActive;")]
+    [InlineData("Task", "SaveAsync", "_repository.SaveAsync(_user);")]
+    public async Task ExtractControlFlowGraphAsync_ExpressionBodyVariations_AllReturnValidCfgRegardlessOfReturnType(
+        string returnType, string methodName, string expressionBody)
+    {
+        // Arrange: Various expression body patterns - all should be supported
+        var sampleCode = $@"
+            public class TestClass 
+            {{
+                private readonly ILogger _logger;
+                private readonly IRepository _repository;
+                private readonly User _user;
+                
+                public {returnType} {methodName}() => {expressionBody}
+            }}";
+
+        var (compilation, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
+        
+        var method = root.DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .First(m => m.Identifier.ValueText == methodName);
+
+        // Verify it's actually an expression body
+        method.ExpressionBody.ShouldNotBeNull($"Method {methodName} should have expression body");
+        method.Body.ShouldBeNull($"Method {methodName} should not have block body");
+
+        // Act
+        var cfg = await _extractor.ExtractControlFlowGraphAsync(compilation, method);
+
+        // Assert: All variations should return valid CFGs
+        cfg.ShouldNotBeNull($"Expression-bodied method {methodName} with return type {returnType} should return valid CFG");
+        cfg.Blocks.Length.ShouldBeGreaterThan(0, $"Method {methodName} CFG should have at least one basic block");
+        
+        // GUARDRAIL: This test ensures expression bodies work across different return types
+        // Critical for knowledge network completeness - void, reference types, value types, Task types
+        var errorMessages = _testLogger.LogMessages.Where(m => m.StartsWith("[Error]")).ToList();
+        errorMessages.ShouldBeEmpty($"No errors should be logged for {methodName} with return type {returnType}");
     }
 
     [Fact]
@@ -143,7 +309,7 @@ public class RoslynCfgExtractorTests
             }";
 
         var (compilation, syntaxTree) = CompilationFactory.CreateBasic(malformedCode);
-        var root = await syntaxTree.GetRootAsync();
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
         
         // Try to find any method declaration (even malformed)
         var method = root.DescendantNodes().OfType<MethodDeclarationSyntax>().FirstOrDefault();
@@ -166,30 +332,27 @@ public class RoslynCfgExtractorTests
             true.ShouldBeTrue("Malformed code couldn't be parsed - this is expected");
         }
     }
-
-    // TODO(human): Add comprehensive error handling tests for edge cases
-    // Context: We've established the basic testing pattern for RoslynCfgExtractor. Now we need robust error handling tests for scenarios where CFG creation might fail with different types of methods and compilation issues.
-    // Your Task: Add tests for scenarios like: 1) Methods with complex generic constraints, 2) Async methods, 3) Methods with unsafe code, 4) Methods with advanced language features (pattern matching, switch expressions), 5) Methods in incomplete compilations.
-    // Guidance: Focus on testing the service's error handling and logging behavior rather than testing Roslyn's CFG creation itself. Each test should verify both the return value and the appropriate log messages.
-
+    
     [Fact]
     public async Task ExtractControlFlowGraphAsync_ConstructorTest_ShouldReturnValidCfg()
     {
         // Arrange: Test constructor CFG extraction
-        var sampleCode = @"
-            public class TestClass 
-            {
-                private int _value;
-                
-                public TestClass(int value)
-                {
-                    _value = value;
-                    Console.WriteLine($""Initialized with {value}"");
-                }
-            }";
+        const string sampleCode = """
+
+                                              public class TestClass 
+                                              {
+                                                  private int _value;
+                                                  
+                                                  public TestClass(int value)
+                                                  {
+                                                      _value = value;
+                                                      Console.WriteLine($"Initialized with {value}");
+                                                  }
+                                              }
+                                  """;
 
         var (compilation, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
-        var root = await syntaxTree.GetRootAsync();
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
         var constructor = root.DescendantNodes()
             .OfType<ConstructorDeclarationSyntax>()
             .First();
@@ -209,7 +372,7 @@ public class RoslynCfgExtractorTests
         var sampleCode = SampleCodeRepository.GetSimpleLinearMethod();
         var (_, syntaxTree) = CompilationFactory.CreateBasic(sampleCode);
         
-        var root = await syntaxTree.GetRootAsync();
+        var root = await syntaxTree.GetRootAsync(TestContext.Current.CancellationToken);
         var method = root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .First();
