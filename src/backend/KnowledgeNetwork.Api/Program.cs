@@ -1,13 +1,23 @@
 using KnowledgeNetwork.Domains.Code.Services;
 using KnowledgeNetwork.Domains.Code.Analyzers.Blocks;
+using KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions;
+using ICSharpMethodBlockAnalyzer = KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions.ICSharpMethodBlockAnalyzer;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 
-// Register our analysis services
-builder.Services.AddScoped<CSharpMethodBlockAnalyzer>();
+// Register our analysis services with dependency injection
+// Core analyzer services (refined 2-step pipeline)
+builder.Services.AddScoped<IRoslynCfgExtractor, RoslynCfgExtractor>();
+builder.Services.AddScoped<IDomainModelConverter, DomainModelConverter>();
+
+// Main analyzer (composed from the two services above)
+builder.Services.AddScoped<ICSharpMethodBlockAnalyzer, CSharpMethodBlockAnalyzer>();
+builder.Services.AddScoped<CSharpMethodBlockAnalyzer>(); // Keep concrete registration for backward compatibility
+
+// Higher-level analysis service
 builder.Services.AddScoped<CSharpAnalysisService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
