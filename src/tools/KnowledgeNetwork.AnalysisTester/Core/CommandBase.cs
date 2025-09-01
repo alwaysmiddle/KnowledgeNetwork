@@ -137,7 +137,12 @@ public abstract class CommandBase
             }
 
             var jsonContent = await File.ReadAllTextAsync(scenarioPath);
-            var scenario = JsonSerializer.Deserialize<TestScenario>(jsonContent);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            var scenario = JsonSerializer.Deserialize<TestScenario>(jsonContent, options);
             
             if (scenario != null && ValidateScenario(scenario))
             {
@@ -160,14 +165,34 @@ public abstract class CommandBase
     /// <returns>Path to scenarios directory</returns>
     public string GetScenariosDirectory()
     {
-        var basePath = Path.Combine(
+        // Try relative path first (works when files are copied to output directory)
+        var relativePath = Path.Combine(
+            "TestHarnesses",
+            ComponentPath,
+            "Scenarios"
+        );
+        
+        // Check if relative path exists from current directory
+        if (Directory.Exists(relativePath))
+        {
+            return Path.GetFullPath(relativePath);
+        }
+        
+        // Fall back to AppContext.BaseDirectory (for runtime execution)
+        var runtimePath = Path.Combine(
             AppContext.BaseDirectory,
             "TestHarnesses",
             ComponentPath,
             "Scenarios"
         );
         
-        return basePath;
+        if (Directory.Exists(runtimePath))
+        {
+            return runtimePath;
+        }
+        
+        // If neither exists, return the runtime path for error reporting
+        return runtimePath;
     }
     
     /// <summary>

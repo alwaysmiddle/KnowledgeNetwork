@@ -13,14 +13,10 @@ namespace KnowledgeNetwork.AnalysisTester.TestHarnesses.Domains.Code.Analyzers.B
 /// </summary>
 public class MethodBlockAnalyzerCommand : CommandBase
 {
-    private readonly ICSharpMethodBlockAnalyzer _analyzer;
+    private readonly ICSharpMethodBlockAnalyzer _analyzer = null!; // We'll implement a simple version inline
 
-    public MethodBlockAnalyzerCommand()
-    {
-        // For now, we'll create a simple mock since the real analyzer needs DI
-        // In a full implementation, you'd properly inject dependencies
-        _analyzer = null!; // We'll implement a simple version inline
-    }
+    // For now, we'll create a simple mock since the real analyzer needs DI
+    // In a full implementation, you'd properly inject dependencies
 
     #region CommandBase Implementation
 

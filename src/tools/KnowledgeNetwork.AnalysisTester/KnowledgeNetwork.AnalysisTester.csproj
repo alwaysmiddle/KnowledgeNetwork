@@ -17,4 +17,10 @@
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
   </ItemGroup>
 
+  <!-- Copy test files to output directory -->
+  <ItemGroup>
+    <None Include="TestHarnesses\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestData\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
