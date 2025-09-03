@@ -1,3 +1,4 @@
+using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -10,13 +11,67 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes;
 /// <summary>
 /// Analyzes class-level relationships within C# code including inheritance, interfaces, composition, and dependencies
 /// </summary>
-public class CSharpClassRelationshipAnalyzer
+public class CSharpClassRelationshipAnalyzer(ILogger<CSharpClassRelationshipAnalyzer> logger) : ICSharpClassRelationshipAnalyzer
 {
-    private readonly ILogger<CSharpClassRelationshipAnalyzer> _logger;
+    private readonly ILogger<CSharpClassRelationshipAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-    public CSharpClassRelationshipAnalyzer(ILogger<CSharpClassRelationshipAnalyzer> logger)
+    /// <summary>
+    /// Resolves the effective file name using multiple fallback strategies
+    /// </summary>
+    private string ResolveEffectiveFileName(CompilationUnitSyntax compilationUnit, string providedFileName)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        // 1. Use provided filename if not empty
+        if (!string.IsNullOrWhiteSpace(providedFileName))
+        {
+            _logger.LogDebug("Using provided filename: {FileName}", providedFileName);
+            return providedFileName;
+        }
+
+        // 2. Try to get filename from syntax tree
+        var syntaxTreePath = compilationUnit.SyntaxTree?.FilePath;
+        if (!string.IsNullOrWhiteSpace(syntaxTreePath))
+        {
+            _logger.LogDebug("Using syntax tree filename: {FileName}", syntaxTreePath);
+            return syntaxTreePath;
+        }
+
+        // 3. Generate identifier based on content hash for in-memory code
+        var contentHash = GenerateContentBasedIdentifier(compilationUnit);
+        var syntheticName = $"<in-memory-{contentHash}>";
+        _logger.LogDebug("Generated synthetic filename: {FileName}", syntheticName);
+        return syntheticName;
+    }
+
+    /// <summary>
+    /// Generates a content-based identifier for in-memory compilation units
+    /// </summary>
+    private string GenerateContentBasedIdentifier(CompilationUnitSyntax compilationUnit)
+    {
+        // Use a simple hash of the first type name + member count for identification
+        var firstType = compilationUnit.DescendantNodes()
+            .OfType<BaseTypeDeclarationSyntax>()
+            .FirstOrDefault();
+
+        if (firstType != null)
+        {
+            var typeName = firstType switch
+            {
+                ClassDeclarationSyntax cls => cls.Identifier.ValueText,
+                InterfaceDeclarationSyntax intf => intf.Identifier.ValueText,
+                StructDeclarationSyntax str => str.Identifier.ValueText,
+                RecordDeclarationSyntax rec => rec.Identifier.ValueText,
+                EnumDeclarationSyntax enm => enm.Identifier.ValueText,
+                _ => "UnknownType"
+            };
+
+            var memberCount = compilationUnit.DescendantNodes().OfType<MemberDeclarationSyntax>().Count();
+            var hashCode = (typeName + memberCount).GetHashCode();
+            return $"{typeName}-{Math.Abs(hashCode):X6}";
+        }
+
+        // Fallback to simple hash of the full text
+        var textHash = compilationUnit.GetText().ToString().GetHashCode();
+        return $"code-{Math.Abs(textHash):X6}";
     }
 
     /// <summary>
@@ -29,14 +84,15 @@ public class CSharpClassRelationshipAnalyzer
     {
         try
         {
-            _logger.LogInformation("Starting class relationship analysis for file: {FileName}", fileName);
+            var effectiveFileName = ResolveEffectiveFileName(compilationUnit, fileName);
+            _logger.LogInformation("Starting class relationship analysis for file: {FileName}", effectiveFileName);
 
             var semanticModel = compilation.GetSemanticModel(compilationUnit.SyntaxTree);
             var graph = new ClassRelationshipGraph
             {
-                ScopeName = fileName,
+                ScopeName = effectiveFileName,
                 ScopeType = ClassAnalysisScope.File,
-                Location = GetLocationInfo(compilationUnit)
+                Location = GetLocationInfo(compilationUnit, effectiveFileName)
             };
 
             // Extract all class/type declarations
@@ -49,7 +105,7 @@ public class CSharpClassRelationshipAnalyzer
             // Create class nodes
             foreach (var typeDeclaration in typeDeclarations)
             {
-                var classNode = await CreateClassNodeAsync(semanticModel, typeDeclaration);
+                var classNode = await CreateClassNodeAsync(semanticModel, typeDeclaration, effectiveFileName);
                 if (classNode != null)
                 {
                     graph.Classes.Add(classNode);
@@ -82,7 +138,7 @@ public class CSharpClassRelationshipAnalyzer
     /// <summary>
     /// Creates a class node from a type declaration
     /// </summary>
-    private async Task<ClassNode?> CreateClassNodeAsync(SemanticModel semanticModel, BaseTypeDeclarationSyntax typeDeclaration)
+    private async Task<ClassNode?> CreateClassNodeAsync(SemanticModel semanticModel, BaseTypeDeclarationSyntax typeDeclaration, string effectiveFileName)
     {
         try
         {
@@ -94,7 +150,7 @@ public class CSharpClassRelationshipAnalyzer
                 Name = symbol.Name,
                 FullName = symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 Namespace = symbol.ContainingNamespace?.ToDisplayString() ?? string.Empty,
-                Location = GetLocationInfo(typeDeclaration)
+                Location = GetLocationInfo(typeDeclaration, effectiveFileName)
             };
 
             // Set class type and modifiers
@@ -254,8 +310,7 @@ public class CSharpClassRelationshipAnalyzer
 
         // Count public members
         metrics.PublicMemberCount = allMembers
-            .Where(m => m.Modifiers.Any(SyntaxKind.PublicKeyword))
-            .Count();
+            .Count(m => m.Modifiers.Any(SyntaxKind.PublicKeyword));
 
         // Calculate WMC (sum of method complexities) - simplified version
         foreach (var method in methods)
@@ -765,16 +820,21 @@ public class CSharpClassRelationshipAnalyzer
     /// <summary>
     /// Gets location information from a syntax node
     /// </summary>
-    private CSharpLocationInfo GetLocationInfo(SyntaxNode? node)
+    private CSharpLocationInfo GetLocationInfo(SyntaxNode? node, string? fallbackFilePath = null)
     {
-        if (node == null) return new CSharpLocationInfo();
+        if (node == null) return new CSharpLocationInfo { FilePath = fallbackFilePath ?? "" };
 
         var location = node.GetLocation();
         var span = location.GetLineSpan();
 
+        // Use fallback file path if syntax tree doesn't have one
+        var effectiveFilePath = !string.IsNullOrWhiteSpace(span.Path) 
+            ? span.Path 
+            : fallbackFilePath ?? "";
+
         return new CSharpLocationInfo
         {
-            FilePath = span.Path ?? "",
+            FilePath = effectiveFilePath,
             StartLine = span.StartLinePosition.Line + 1,
             StartColumn = span.StartLinePosition.Character + 1,
             EndLine = span.EndLinePosition.Line + 1,
@@ -793,7 +853,7 @@ public class CSharpClassRelationshipAnalyzer
             StructDeclarationSyntax structDecl => structDecl.Members.OfType<MethodDeclarationSyntax>(),
             InterfaceDeclarationSyntax interfaceDecl => interfaceDecl.Members.OfType<MethodDeclarationSyntax>(),
             RecordDeclarationSyntax recordDecl => recordDecl.Members.OfType<MethodDeclarationSyntax>(),
-            _ => Enumerable.Empty<MethodDeclarationSyntax>()
+            _ => []
         };
     }
 
