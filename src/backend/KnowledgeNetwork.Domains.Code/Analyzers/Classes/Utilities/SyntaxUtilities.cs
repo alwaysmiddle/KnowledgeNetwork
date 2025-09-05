@@ -45,7 +45,7 @@ public class SyntaxUtilities : ISyntaxUtilities
             StructDeclarationSyntax structDecl => structDecl.Members.OfType<MethodDeclarationSyntax>(),
             InterfaceDeclarationSyntax interfaceDecl => interfaceDecl.Members.OfType<MethodDeclarationSyntax>(),
             RecordDeclarationSyntax recordDecl => recordDecl.Members.OfType<MethodDeclarationSyntax>(),
-            _ => Enumerable.Empty<MethodDeclarationSyntax>()
+            _ => []
         };
     }
 
