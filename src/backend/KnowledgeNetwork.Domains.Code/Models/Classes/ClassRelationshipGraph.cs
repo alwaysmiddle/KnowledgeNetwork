@@ -1,3 +1,4 @@
+using KnowledgeNetwork.Domains.Code.Models.Classes.ClassEnums;
 using KnowledgeNetwork.Domains.Code.Models.Common;
 
 namespace KnowledgeNetwork.Domains.Code.Models.Classes;
@@ -156,30 +157,4 @@ public class ClassRelationshipGraph
 
         return interfaces.ToList();
     }
-}
-
-/// <summary>
-/// Scope types for class analysis
-/// </summary>
-public enum ClassAnalysisScope
-{
-    /// <summary>
-    /// Single file analysis
-    /// </summary>
-    File,
-
-    /// <summary>
-    /// Namespace analysis
-    /// </summary>
-    Namespace,
-
-    /// <summary>
-    /// Project-wide analysis
-    /// </summary>
-    Project,
-
-    /// <summary>
-    /// Assembly analysis
-    /// </summary>
-    Assembly
 }

@@ -2,6 +2,7 @@ using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.RelationshipAnalyzers;
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
 using KnowledgeNetwork.Domains.Code.Models.Classes;
+using KnowledgeNetwork.Domains.Code.Models.Classes.ClassEnums;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging;
