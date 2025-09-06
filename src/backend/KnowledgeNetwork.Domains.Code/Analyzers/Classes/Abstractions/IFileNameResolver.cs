@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 
 /// <summary>
 /// Resolves effective file names using multiple fallback strategies

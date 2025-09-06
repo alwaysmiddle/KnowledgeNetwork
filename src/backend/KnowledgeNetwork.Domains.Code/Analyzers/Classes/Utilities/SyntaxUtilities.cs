@@ -1,3 +1,4 @@
+using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 using KnowledgeNetwork.Domains.Code.Models.Common;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

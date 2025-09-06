@@ -1,3 +1,4 @@
+using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging;
 

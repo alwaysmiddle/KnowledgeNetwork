@@ -2,7 +2,7 @@ using KnowledgeNetwork.Domains.Code.Models.Common;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 
 /// <summary>
 /// Common syntax helper utilities

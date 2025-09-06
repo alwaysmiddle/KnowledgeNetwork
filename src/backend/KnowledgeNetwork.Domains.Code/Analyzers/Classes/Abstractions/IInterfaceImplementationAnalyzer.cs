@@ -2,15 +2,15 @@ using KnowledgeNetwork.Domains.Code.Models.Classes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.RelationshipAnalyzers;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 
 /// <summary>
-/// Analyzes nested class relationships
+/// Analyzes interface implementation relationships
 /// </summary>
-public interface INestedClassAnalyzer
+public interface IInterfaceImplementationAnalyzer
 {
     /// <summary>
-    /// Analyzes nested class relationships within the provided type declarations
+    /// Analyzes interface implementations within the provided type declarations
     /// </summary>
     Task AnalyzeAsync(
         SemanticModel semanticModel, 

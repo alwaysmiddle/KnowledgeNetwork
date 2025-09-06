@@ -2,15 +2,15 @@ using KnowledgeNetwork.Domains.Code.Models.Classes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.RelationshipAnalyzers;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 
 /// <summary>
-/// Analyzes inheritance relationships between classes
+/// Analyzes composition relationships (has-a relationships through fields/properties)
 /// </summary>
-public interface IInheritanceAnalyzer
+public interface ICompositionAnalyzer
 {
     /// <summary>
-    /// Analyzes inheritance relationships within the provided type declarations
+    /// Analyzes composition relationships within the provided type declarations
     /// </summary>
     Task AnalyzeAsync(
         SemanticModel semanticModel, 

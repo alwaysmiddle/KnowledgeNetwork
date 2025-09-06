@@ -2,7 +2,7 @@ using KnowledgeNetwork.Domains.Code.Models.Classes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
+namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 
 /// <summary>
 /// Factory for creating ClassNode instances from syntax declarations
