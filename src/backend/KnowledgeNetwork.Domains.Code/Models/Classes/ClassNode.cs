@@ -1,6 +1,5 @@
 using KnowledgeNetwork.Domains.Code.Models.Classes.ClassEnums;
 using KnowledgeNetwork.Domains.Code.Models.Common;
-using KnowledgeNetwork.Domains.Code.Models.Enums;
 
 namespace KnowledgeNetwork.Domains.Code.Models.Classes;
 
@@ -72,7 +71,7 @@ public class ClassNode
     /// <summary>
     /// Generic type parameters if any
     /// </summary>
-    public List<string> GenericTypeParameters { get; set; } = new();
+    public List<string> GenericTypeParameters { get; set; } = [];
 
     /// <summary>
     /// Direct base class name (if any)
@@ -82,7 +81,7 @@ public class ClassNode
     /// <summary>
     /// Interfaces implemented directly by this class
     /// </summary>
-    public List<string> ImplementedInterfaces { get; set; } = new();
+    public List<string> ImplementedInterfaces { get; set; } = [];
 
     /// <summary>
     /// Summary information about class members

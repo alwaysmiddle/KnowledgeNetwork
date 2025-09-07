@@ -34,40 +34,38 @@ public class InterfaceImplementationAnalyzer(
 
             foreach (var typeDeclaration in typeDeclarations)
             {
-                if (typeDeclaration.BaseList?.Types.Count > 0)
+                if (!(typeDeclaration.BaseList?.Types.Count > 0)) continue;
+                
+                var classSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
+                if (classSymbol == null)
                 {
-                    var classSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
-                    if (classSymbol == null)
-                    {
-                        _logger.LogWarning("Could not get symbol for type declaration: {TypeName}", 
-                            typeDeclaration.GetType().Name);
-                        continue;
-                    }
+                    _logger.LogWarning("Could not get symbol for type declaration: {TypeName}", 
+                        typeDeclaration.GetType().Name);
+                    continue;
+                }
 
-                    var classNode = graph.Classes.FirstOrDefault(c => 
-                        c.FullName == classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-                    if (classNode == null)
-                    {
-                        _logger.LogWarning("Could not find class in graph: {ClassName}", classSymbol.Name);
-                        continue;
-                    }
+                var classNode = graph.Classes.FirstOrDefault(c => 
+                    c.FullName == classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                if (classNode == null)
+                {
+                    _logger.LogWarning("Could not find class in graph: {ClassName}", classSymbol.Name);
+                    continue;
+                }
 
-                    // Find interfaces in base list
-                    foreach (var baseType in typeDeclaration.BaseList.Types)
-                    {
-                        var baseSymbol = semanticModel.GetSymbolInfo(baseType.Type).Symbol as INamedTypeSymbol;
-                        if (baseSymbol?.TypeKind == TypeKind.Interface)
-                        {
-                            var implementationEdge = CreateImplementationEdge(
-                                classNode, classSymbol, baseSymbol, baseType, typeDeclaration, semanticModel);
+                // Find interfaces in base list
+                foreach (var baseType in typeDeclaration.BaseList.Types)
+                {
+                    var baseSymbol = semanticModel.GetSymbolInfo(baseType.Type).Symbol as INamedTypeSymbol;
+                    if (baseSymbol?.TypeKind != TypeKind.Interface) continue;
+                        
+                    var implementationEdge = CreateImplementationEdge(
+                        classNode, classSymbol, baseSymbol, baseType, typeDeclaration, semanticModel);
                             
-                            graph.InterfaceImplementations.Add(implementationEdge);
-                            implementationCount++;
+                    graph.InterfaceImplementations.Add(implementationEdge);
+                    implementationCount++;
 
-                            _logger.LogTrace("Found interface implementation: {Class} implements {Interface}",
-                                classSymbol.Name, baseSymbol.Name);
-                        }
-                    }
+                    _logger.LogTrace("Found interface implementation: {Class} implements {Interface}",
+                        classSymbol.Name, baseSymbol.Name);
                 }
             }
 

@@ -21,10 +21,7 @@ public class NestedClassAnalyzer(
     /// <summary>
     /// Analyzes nested class relationships within the provided type declarations
     /// </summary>
-    public async Task AnalyzeAsync(
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
-        List<BaseTypeDeclarationSyntax> typeDeclarations)
+    public async Task AnalyzeAsync(SemanticModel semanticModel, ClassRelationshipGraph graph, List<BaseTypeDeclarationSyntax> typeDeclarations)
     {
         _logger.LogDebug("Starting nested class relationship analysis for {TypeCount} types", typeDeclarations.Count);
 
@@ -54,13 +51,7 @@ public class NestedClassAnalyzer(
                 var allMembers = _syntaxUtilities.GetAllMembers(typeDeclaration);
                 var nestedTypes = allMembers.OfType<BaseTypeDeclarationSyntax>();
 
-                foreach (var nestedType in nestedTypes)
-                {
-                    if (AnalyzeNestedType(nestedType, semanticModel, graph, containerClass))
-                    {
-                        nestedClassCount++;
-                    }
-                }
+                nestedClassCount += nestedTypes.Count(nestedType => AnalyzeNestedType(nestedType, semanticModel, graph, containerClass));
             }
 
             _logger.LogDebug("Completed nested class analysis. Found {NestedClassCount} nested class relationships", 
@@ -76,10 +67,7 @@ public class NestedClassAnalyzer(
     /// <summary>
     /// Analyzes a single nested type and creates the relationship edge
     /// </summary>
-    private bool AnalyzeNestedType(
-        BaseTypeDeclarationSyntax nestedType,
-        SemanticModel semanticModel,
-        ClassRelationshipGraph graph,
+    private bool AnalyzeNestedType(BaseTypeDeclarationSyntax nestedType, SemanticModel semanticModel, ClassRelationshipGraph graph,
         ClassNode containerClass)
     {
         try
@@ -117,10 +105,7 @@ public class NestedClassAnalyzer(
     /// <summary>
     /// Creates a nested class relationship edge
     /// </summary>
-    private NestedClassEdge CreateNestedClassEdge(
-        ClassNode containerClass,
-        ClassNode nestedClass,
-        ISymbol nestedSymbol,
+    private NestedClassEdge CreateNestedClassEdge(ClassNode containerClass, ClassNode nestedClass, ISymbol nestedSymbol,
         BaseTypeDeclarationSyntax nestedType)
     {
         return new NestedClassEdge

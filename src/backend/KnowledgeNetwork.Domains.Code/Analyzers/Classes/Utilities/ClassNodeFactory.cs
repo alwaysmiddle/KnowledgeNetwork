@@ -120,19 +120,17 @@ public class ClassNodeFactory(
     /// </summary>
     private void ExtractBaseClassAndInterfaces(ClassNode classNode, BaseTypeDeclarationSyntax typeDeclaration, ISymbol symbol)
     {
-        if (symbol is INamedTypeSymbol namedType)
+        if (symbol is not INamedTypeSymbol namedType) return;
+        // Base class
+        if (namedType.BaseType != null && namedType.BaseType.SpecialType != SpecialType.System_Object)
         {
-            // Base class
-            if (namedType.BaseType != null && namedType.BaseType.SpecialType != SpecialType.System_Object)
-            {
-                classNode.BaseClassName = namedType.BaseType.ToDisplayString();
-            }
-
-            // Interfaces
-            classNode.ImplementedInterfaces = namedType.Interfaces
-                .Select(i => i.ToDisplayString())
-                .ToList();
+            classNode.BaseClassName = namedType.BaseType.ToDisplayString();
         }
+
+        // Interfaces
+        classNode.ImplementedInterfaces = namedType.Interfaces
+            .Select(i => i.ToDisplayString())
+            .ToList();
     }
 
     /// <summary>

@@ -26,32 +26,32 @@ public class ClassRelationshipGraph
     /// <summary>
     /// All classes found in the analyzed scope
     /// </summary>
-    public List<ClassNode> Classes { get; set; } = new();
+    public List<ClassNode> Classes { get; set; } = [];
 
     /// <summary>
     /// Inheritance relationships between classes
     /// </summary>
-    public List<InheritanceEdge> InheritanceRelationships { get; set; } = new();
+    public List<InheritanceEdge> InheritanceRelationships { get; set; } = [];
 
     /// <summary>
     /// Interface implementation relationships
     /// </summary>
-    public List<InterfaceImplementationEdge> InterfaceImplementations { get; set; } = new();
+    public List<InterfaceImplementationEdge> InterfaceImplementations { get; set; } = [];
 
     /// <summary>
     /// Composition and aggregation relationships
     /// </summary>
-    public List<CompositionEdge> CompositionRelationships { get; set; } = new();
+    public List<CompositionEdge> CompositionRelationships { get; set; } = [];
 
     /// <summary>
     /// Dependency relationships (using other classes)
     /// </summary>
-    public List<ClassDependencyEdge> DependencyRelationships { get; set; } = new();
+    public List<ClassDependencyEdge> DependencyRelationships { get; set; } = [];
 
     /// <summary>
     /// Nested class relationships
     /// </summary>
-    public List<NestedClassEdge> NestedClassRelationships { get; set; } = new();
+    public List<NestedClassEdge> NestedClassRelationships { get; set; } = [];
 
     /// <summary>
     /// Source location information
@@ -143,16 +143,11 @@ public class ClassRelationshipGraph
 
         // Inherited implementations
         var hierarchy = GetInheritanceHierarchyFor(classId);
-        foreach (var ancestorClass in hierarchy)
+        foreach (var interfaceName in hierarchy.Select(ancestorClass => InterfaceImplementations
+                     .Where(i => i.ClassId == ancestorClass.Id)
+                     .Select(i => i.InterfaceName)).SelectMany(inheritedInterfaces => inheritedInterfaces))
         {
-            var inheritedInterfaces = InterfaceImplementations
-                .Where(i => i.ClassId == ancestorClass.Id)
-                .Select(i => i.InterfaceName);
-            
-            foreach (var interfaceName in inheritedInterfaces)
-            {
-                interfaces.Add(interfaceName);
-            }
+            interfaces.Add(interfaceName);
         }
 
         return interfaces.ToList();

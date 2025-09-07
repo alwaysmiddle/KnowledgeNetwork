@@ -46,7 +46,7 @@ public class InterfaceImplementationEdge
     /// <summary>
     /// Generic type arguments if the interface is generic
     /// </summary>
-    public List<string> GenericTypeArguments { get; set; } = new();
+    public List<string> GenericTypeArguments { get; set; } = [];
 
     /// <summary>
     /// Whether the interface crosses assembly boundaries
@@ -61,7 +61,7 @@ public class InterfaceImplementationEdge
     /// <summary>
     /// Methods from this interface that are implemented
     /// </summary>
-    public List<InterfaceMethodImplementation> ImplementedMethods { get; set; } = new();
+    public List<InterfaceMethodImplementation> ImplementedMethods { get; set; } = [];
 
     /// <summary>
     /// Source location where the interface implementation is declared

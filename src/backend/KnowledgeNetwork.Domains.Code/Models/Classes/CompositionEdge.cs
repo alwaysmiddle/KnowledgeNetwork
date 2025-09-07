@@ -66,7 +66,7 @@ public class CompositionEdge
     /// <summary>
     /// Generic type arguments if applicable
     /// </summary>
-    public List<string> GenericTypeArguments { get; set; } = new();
+    public List<string> GenericTypeArguments { get; set; } = [];
 
     /// <summary>
     /// Visibility of the member creating this relationship
