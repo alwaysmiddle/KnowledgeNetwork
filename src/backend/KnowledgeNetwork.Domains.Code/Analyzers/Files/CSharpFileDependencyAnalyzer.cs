@@ -17,9 +17,7 @@ public class CSharpFileDependencyAnalyzer(ILogger<CSharpFileDependencyAnalyzer> 
     /// <summary>
     /// Analyzes file dependencies within a compilation (project-level analysis)
     /// </summary>
-    public async Task<FileDependencyGraph?> AnalyzeProjectAsync(
-        Compilation compilation,
-        string projectName = "",
+    public async Task<FileDependencyGraph?> AnalyzeProjectAsync(Compilation compilation, string projectName = "",
         string projectPath = "")
     {
         try

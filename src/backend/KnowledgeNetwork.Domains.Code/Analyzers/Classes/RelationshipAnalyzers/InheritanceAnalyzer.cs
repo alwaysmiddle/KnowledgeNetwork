@@ -11,9 +11,7 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.RelationshipAnalyzers;
 /// <summary>
 /// Analyzes inheritance relationships between classes
 /// </summary>
-public class InheritanceAnalyzer(
-    ILogger<InheritanceAnalyzer> logger,
-    ISyntaxUtilities syntaxUtilities) : IInheritanceAnalyzer
+public class InheritanceAnalyzer(ILogger<InheritanceAnalyzer> logger, ISyntaxUtilities syntaxUtilities) : IInheritanceAnalyzer
 {
     private readonly ILogger<InheritanceAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly ISyntaxUtilities _syntaxUtilities = syntaxUtilities ?? throw new ArgumentNullException(nameof(syntaxUtilities));
@@ -21,10 +19,7 @@ public class InheritanceAnalyzer(
     /// <summary>
     /// Analyzes inheritance relationships within the provided type declarations
     /// </summary>
-    public async Task AnalyzeAsync(
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
-        List<BaseTypeDeclarationSyntax> typeDeclarations)
+    public async Task AnalyzeAsync(SemanticModel semanticModel, ClassRelationshipGraph graph, List<BaseTypeDeclarationSyntax> typeDeclarations)
     {
         _logger.LogDebug("Starting inheritance relationship analysis for {TypeCount} types", typeDeclarations.Count);
 
@@ -34,40 +29,38 @@ public class InheritanceAnalyzer(
             
             foreach (var typeDeclaration in typeDeclarations)
             {
-                if (typeDeclaration.BaseList?.Types.Count > 0)
+                if (!(typeDeclaration.BaseList?.Types.Count > 0)) continue;
+                
+                var childSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
+                if (childSymbol == null) 
                 {
-                    var childSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
-                    if (childSymbol == null) 
-                    {
-                        _logger.LogWarning("Could not get symbol for type declaration: {TypeName}", 
-                            typeDeclaration.GetType().Name);
-                        continue;
-                    }
+                    _logger.LogWarning("Could not get symbol for type declaration: {TypeName}", 
+                        typeDeclaration.GetType().Name);
+                    continue;
+                }
 
-                    var childClass = graph.Classes.FirstOrDefault(c => 
-                        c.FullName == childSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-                    if (childClass == null) 
-                    {
-                        _logger.LogWarning("Could not find child class in graph: {ClassName}", childSymbol.Name);
-                        continue;
-                    }
+                var childClass = graph.Classes.FirstOrDefault(c => 
+                    c.FullName == childSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                if (childClass == null) 
+                {
+                    _logger.LogWarning("Could not find child class in graph: {ClassName}", childSymbol.Name);
+                    continue;
+                }
 
-                    // Find base class (first non-interface type in base list)
-                    foreach (var baseType in typeDeclaration.BaseList.Types)
-                    {
-                        var baseSymbol = semanticModel.GetSymbolInfo(baseType.Type).Symbol as INamedTypeSymbol;
-                        if (baseSymbol?.TypeKind == TypeKind.Class)
-                        {
-                            var inheritanceEdge = CreateInheritanceEdge(childClass, childSymbol, baseSymbol, baseType);
-                            graph.InheritanceRelationships.Add(inheritanceEdge);
-                            inheritanceCount++;
+                // Find base class (first non-interface type in base list)
+                foreach (var baseType in typeDeclaration.BaseList.Types)
+                {
+                    var baseSymbol = semanticModel.GetSymbolInfo(baseType.Type).Symbol as INamedTypeSymbol;
+                    if (baseSymbol?.TypeKind != TypeKind.Class) continue;
+                    
+                    var inheritanceEdge = CreateInheritanceEdge(childClass, childSymbol, baseSymbol, baseType);
+                    graph.InheritanceRelationships.Add(inheritanceEdge);
+                    inheritanceCount++;
                             
-                            _logger.LogTrace("Found inheritance: {Child} inherits from {Parent}", 
-                                childSymbol.Name, baseSymbol.Name);
+                    _logger.LogTrace("Found inheritance: {Child} inherits from {Parent}", 
+                        childSymbol.Name, baseSymbol.Name);
                             
-                            break; // Only one base class in C#
-                        }
-                    }
+                    break; // Only one base class in C#
                 }
             }
 
@@ -84,10 +77,7 @@ public class InheritanceAnalyzer(
     /// <summary>
     /// Creates an inheritance edge from the analyzed symbols
     /// </summary>
-    private InheritanceEdge CreateInheritanceEdge(
-        ClassNode childClass,
-        ISymbol childSymbol,
-        INamedTypeSymbol baseSymbol,
+    private InheritanceEdge CreateInheritanceEdge(ClassNode childClass, ISymbol childSymbol, INamedTypeSymbol baseSymbol,
         BaseTypeSyntax baseType)
     {
         return new InheritanceEdge

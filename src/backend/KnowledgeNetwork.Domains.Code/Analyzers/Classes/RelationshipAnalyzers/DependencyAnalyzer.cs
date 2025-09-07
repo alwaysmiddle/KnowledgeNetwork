@@ -1,7 +1,5 @@
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
-using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
 using KnowledgeNetwork.Domains.Code.Models.Classes;
-using KnowledgeNetwork.Domains.Code.Models.Common;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,9 +10,7 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.RelationshipAnalyzers;
 /// <summary>
 /// Analyzes dependency relationships (usage without ownership)
 /// </summary>
-public class DependencyAnalyzer(
-    ILogger<DependencyAnalyzer> logger,
-    ISyntaxUtilities syntaxUtilities) : IDependencyAnalyzer
+public class DependencyAnalyzer(ILogger<DependencyAnalyzer> logger, ISyntaxUtilities syntaxUtilities) : IDependencyAnalyzer
 {
     private readonly ILogger<DependencyAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly ISyntaxUtilities _syntaxUtilities = syntaxUtilities ?? throw new ArgumentNullException(nameof(syntaxUtilities));
@@ -22,10 +18,7 @@ public class DependencyAnalyzer(
     /// <summary>
     /// Analyzes dependency relationships within the provided type declarations
     /// </summary>
-    public async Task AnalyzeAsync(
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
-        List<BaseTypeDeclarationSyntax> typeDeclarations)
+    public async Task AnalyzeAsync(SemanticModel semanticModel, ClassRelationshipGraph graph, List<BaseTypeDeclarationSyntax> typeDeclarations)
     {
         _logger.LogDebug("Starting dependency relationship analysis for {TypeCount} types", typeDeclarations.Count);
 
@@ -53,10 +46,7 @@ public class DependencyAnalyzer(
 
                 // Analyze method parameters and return types
                 var methods = _syntaxUtilities.GetMethods(typeDeclaration);
-                foreach (var method in methods)
-                {
-                    dependencyCount += AnalyzeDependenciesInMethod(method, semanticModel, graph, classNode);
-                }
+                dependencyCount += methods.Sum(method => AnalyzeDependenciesInMethod(method, semanticModel, graph, classNode));
 
                 // Analyze local variables and method calls
                 var allNodes = typeDeclaration.DescendantNodes();
@@ -76,10 +66,7 @@ public class DependencyAnalyzer(
     /// <summary>
     /// Analyzes dependencies in a method
     /// </summary>
-    private int AnalyzeDependenciesInMethod(
-        MethodDeclarationSyntax method, 
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
+    private int AnalyzeDependenciesInMethod(MethodDeclarationSyntax method, SemanticModel semanticModel, ClassRelationshipGraph graph, 
         ClassNode classNode)
     {
         var dependencyCount = 0;
@@ -99,13 +86,11 @@ public class DependencyAnalyzer(
             // Parameter dependencies
             foreach (var parameter in method.ParameterList.Parameters)
             {
-                if (parameter.Type != null)
-                {
-                    if (AnalyzeDependencyFromType(parameter.Type, semanticModel, graph, classNode, 
+                if (parameter.Type == null) continue;
+                if (AnalyzeDependencyFromType(parameter.Type, semanticModel, graph, classNode, 
                         ClassDependencyType.Parameter, parameter))
-                    {
-                        dependencyCount++;
-                    }
+                {
+                    dependencyCount++;
                 }
             }
         }
@@ -120,10 +105,7 @@ public class DependencyAnalyzer(
     /// <summary>
     /// Analyzes dependencies in syntax nodes
     /// </summary>
-    private int AnalyzeDependenciesInNodes(
-        IEnumerable<SyntaxNode> nodes, 
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
+    private int AnalyzeDependenciesInNodes(IEnumerable<SyntaxNode> nodes, SemanticModel semanticModel, ClassRelationshipGraph graph, 
         ClassNode classNode)
     {
         var dependencyCount = 0;
@@ -170,18 +152,12 @@ public class DependencyAnalyzer(
     /// <summary>
     /// Analyzes dependency from a type reference
     /// </summary>
-    private bool AnalyzeDependencyFromType(
-        TypeSyntax typeSyntax, 
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
-        ClassNode classNode, 
-        ClassDependencyType dependencyType, 
-        SyntaxNode location)
+    private bool AnalyzeDependencyFromType(TypeSyntax typeSyntax, SemanticModel semanticModel, ClassRelationshipGraph graph, 
+        ClassNode classNode, ClassDependencyType dependencyType, SyntaxNode location)
     {
         try
         {
-            var typeSymbol = semanticModel.GetSymbolInfo(typeSyntax).Symbol as ITypeSymbol;
-            if (typeSymbol == null)
+            if (semanticModel.GetSymbolInfo(typeSyntax).Symbol is not ITypeSymbol typeSymbol)
             {
                 _logger.LogTrace("Could not resolve type symbol for dependency analysis");
                 return false;
@@ -197,13 +173,15 @@ public class DependencyAnalyzer(
             var typeFullName = typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             // Check if this is already a composition relationship
-            if (HasExistingComposition(graph, classNode, typeFullName))
+            if (!HasExistingComposition(graph, classNode, typeFullName))
             {
-                _logger.LogTrace("Skipping dependency - already has composition relationship: {TypeName}", typeSymbol.Name);
-                return false;
+                return CreateOrUpdateDependencyEdge(graph, classNode, typeSymbol, typeFullName, dependencyType,
+                    location);
             }
+                
+            _logger.LogTrace("Skipping dependency - already has composition relationship: {TypeName}", typeSymbol.Name);
+            return false;
 
-            return CreateOrUpdateDependencyEdge(graph, classNode, typeSymbol, typeFullName, dependencyType, location);
         }
         catch (Exception ex)
         {
@@ -215,38 +193,32 @@ public class DependencyAnalyzer(
     /// <summary>
     /// Analyzes dependency from method invocation
     /// </summary>
-    private bool AnalyzeDependencyFromInvocation(
-        InvocationExpressionSyntax invocation, 
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
-        ClassNode classNode)
+    private bool AnalyzeDependencyFromInvocation(InvocationExpressionSyntax invocation, SemanticModel semanticModel, 
+        ClassRelationshipGraph graph, ClassNode classNode)
     {
         try
         {
             var symbolInfo = semanticModel.GetSymbolInfo(invocation);
-            if (symbolInfo.Symbol is IMethodSymbol methodSymbol)
+            if (symbolInfo.Symbol is not IMethodSymbol methodSymbol) return false;
+            
+            var containingType = methodSymbol.ContainingType;
+            if (containingType is not { SpecialType: SpecialType.None }) return false;
+                
+            var typeFullName = containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+            // Skip if this is the same class
+            if (typeFullName == classNode.FullName)
             {
-                var containingType = methodSymbol.ContainingType;
-                if (containingType != null && containingType.SpecialType == SpecialType.None)
-                {
-                    var typeFullName = containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
-                    // Skip if this is the same class
-                    if (typeFullName == classNode.FullName)
-                    {
-                        _logger.LogTrace("Skipping self-reference in method invocation");
-                        return false;
-                    }
-
-                    // Create a synthetic type syntax for the containing type
-                    var typeSyntax = SyntaxFactory.IdentifierName(containingType.Name);
-                    var dependencyType = methodSymbol.IsStatic ? ClassDependencyType.StaticCall : ClassDependencyType.Usage;
-
-                    return AnalyzeDependencyFromType(typeSyntax, semanticModel, graph, classNode, dependencyType, invocation);
-                }
+                _logger.LogTrace("Skipping self-reference in method invocation");
+                return false;
             }
 
-            return false;
+            // Create a synthetic type syntax for the containing type
+            var typeSyntax = SyntaxFactory.IdentifierName(containingType.Name);
+            var dependencyType = methodSymbol.IsStatic ? ClassDependencyType.StaticCall : ClassDependencyType.Usage;
+
+            return AnalyzeDependencyFromType(typeSyntax, semanticModel, graph, classNode, dependencyType, invocation);
+
         }
         catch (Exception ex)
         {
@@ -258,13 +230,8 @@ public class DependencyAnalyzer(
     /// <summary>
     /// Creates or updates a dependency edge
     /// </summary>
-    private bool CreateOrUpdateDependencyEdge(
-        ClassRelationshipGraph graph,
-        ClassNode classNode,
-        ITypeSymbol typeSymbol,
-        string typeFullName,
-        ClassDependencyType dependencyType,
-        SyntaxNode location)
+    private bool CreateOrUpdateDependencyEdge(ClassRelationshipGraph graph, ClassNode classNode, ITypeSymbol typeSymbol,
+        string typeFullName, ClassDependencyType dependencyType, SyntaxNode location)
     {
         // Find existing dependency edge
         var existingDependency = graph.DependencyRelationships.FirstOrDefault(d =>
@@ -297,12 +264,12 @@ public class DependencyAnalyzer(
                 TargetClassId = typeFullName,
                 TargetClassName = typeSymbol.ToDisplayString(),
                 DependencyType = dependencyType,
-                UsageTypes = new List<DependencyUsage> { GetDependencyUsage(dependencyType) },
+                UsageTypes = [GetDependencyUsage(dependencyType)],
                 Strength = DetermineDependencyStrength(dependencyType),
                 ReferenceCount = 1,
                 IsCrossNamespace = classNode.Namespace != typeSymbol.ContainingNamespace?.ToDisplayString(),
                 IsGenericTarget = typeSymbol is INamedTypeSymbol namedType && namedType.IsGenericType,
-                UsageLocations = new List<CSharpLocationInfo> { _syntaxUtilities.GetLocationInfo(location) }
+                UsageLocations = [_syntaxUtilities.GetLocationInfo(location)]
             };
 
             // Handle generic type arguments
@@ -342,7 +309,7 @@ public class DependencyAnalyzer(
     /// <summary>
     /// Checks if there's already a composition relationship
     /// </summary>
-    private bool HasExistingComposition(ClassRelationshipGraph graph, ClassNode classNode, string typeFullName)
+    private static bool HasExistingComposition(ClassRelationshipGraph graph, ClassNode classNode, string typeFullName)
     {
         return graph.CompositionRelationships.Any(c =>
             c.ContainerClassId == classNode.Id &&

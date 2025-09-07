@@ -1,6 +1,4 @@
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
-using KnowledgeNetwork.Domains.Code.Analyzers.Classes.RelationshipAnalyzers;
-using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
 using KnowledgeNetwork.Domains.Code.Models.Classes;
 using KnowledgeNetwork.Domains.Code.Models.Classes.ClassEnums;
 using Microsoft.CodeAnalysis;
@@ -12,16 +10,10 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes;
 /// <summary>
 /// Analyzes class-level relationships within C# code including inheritance, interfaces, composition, and dependencies
 /// </summary>
-public class CSharpClassRelationshipAnalyzer(
-    ILogger<CSharpClassRelationshipAnalyzer> logger,
-    IFileNameResolver fileNameResolver,
-    IClassNodeFactory classNodeFactory,
-    ISyntaxUtilities syntaxUtilities,
-    IInheritanceAnalyzer inheritanceAnalyzer,
-    IInterfaceImplementationAnalyzer interfaceImplementationAnalyzer,
-    ICompositionAnalyzer compositionAnalyzer,
-    IDependencyAnalyzer dependencyAnalyzer,
-    INestedClassAnalyzer nestedClassAnalyzer) : ICSharpClassRelationshipAnalyzer
+public class CSharpClassRelationshipAnalyzer(ILogger<CSharpClassRelationshipAnalyzer> logger, IFileNameResolver fileNameResolver,
+    IClassNodeFactory classNodeFactory, ISyntaxUtilities syntaxUtilities, IInheritanceAnalyzer inheritanceAnalyzer,
+    IInterfaceImplementationAnalyzer interfaceImplementationAnalyzer, ICompositionAnalyzer compositionAnalyzer,
+    IDependencyAnalyzer dependencyAnalyzer, INestedClassAnalyzer nestedClassAnalyzer) : ICSharpClassRelationshipAnalyzer
 {
     private readonly ILogger<CSharpClassRelationshipAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly IFileNameResolver _fileNameResolver = fileNameResolver ?? throw new ArgumentNullException(nameof(fileNameResolver));
@@ -37,9 +29,7 @@ public class CSharpClassRelationshipAnalyzer(
     /// <summary>
     /// Analyzes class relationships within a compilation unit (file)
     /// </summary>
-    public async Task<ClassRelationshipGraph?> AnalyzeFileAsync(
-        Compilation compilation,
-        CompilationUnitSyntax compilationUnit,
+    public async Task<ClassRelationshipGraph?> AnalyzeFileAsync(Compilation compilation, CompilationUnitSyntax compilationUnit,
         string fileName = "")
     {
         try

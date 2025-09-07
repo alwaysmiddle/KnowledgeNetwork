@@ -1,5 +1,4 @@
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
-using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
 using KnowledgeNetwork.Domains.Code.Models.Classes;
 using KnowledgeNetwork.Domains.Code.Models.Classes.ClassEnums;
 using Microsoft.CodeAnalysis;
@@ -11,9 +10,7 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.RelationshipAnalyzers;
 /// <summary>
 /// Analyzes interface implementation relationships
 /// </summary>
-public class InterfaceImplementationAnalyzer(
-    ILogger<InterfaceImplementationAnalyzer> logger,
-    ISyntaxUtilities syntaxUtilities) : IInterfaceImplementationAnalyzer
+public class InterfaceImplementationAnalyzer(ILogger<InterfaceImplementationAnalyzer> logger, ISyntaxUtilities syntaxUtilities) : IInterfaceImplementationAnalyzer
 {
     private readonly ILogger<InterfaceImplementationAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly ISyntaxUtilities _syntaxUtilities = syntaxUtilities ?? throw new ArgumentNullException(nameof(syntaxUtilities));
@@ -21,10 +18,7 @@ public class InterfaceImplementationAnalyzer(
     /// <summary>
     /// Analyzes interface implementations within the provided type declarations
     /// </summary>
-    public async Task AnalyzeAsync(
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
-        List<BaseTypeDeclarationSyntax> typeDeclarations)
+    public async Task AnalyzeAsync(SemanticModel semanticModel, ClassRelationshipGraph graph, List<BaseTypeDeclarationSyntax> typeDeclarations)
     {
         _logger.LogDebug("Starting interface implementation analysis for {TypeCount} types", typeDeclarations.Count);
 
@@ -82,13 +76,8 @@ public class InterfaceImplementationAnalyzer(
     /// <summary>
     /// Creates an interface implementation edge from the analyzed symbols
     /// </summary>
-    private InterfaceImplementationEdge CreateImplementationEdge(
-        ClassNode classNode,
-        ISymbol classSymbol,
-        INamedTypeSymbol interfaceSymbol,
-        BaseTypeSyntax baseType,
-        BaseTypeDeclarationSyntax classDeclaration,
-        SemanticModel semanticModel)
+    private InterfaceImplementationEdge CreateImplementationEdge(ClassNode classNode, ISymbol classSymbol, INamedTypeSymbol interfaceSymbol,
+        BaseTypeSyntax baseType, BaseTypeDeclarationSyntax classDeclaration, SemanticModel semanticModel)
     {
         var implementationEdge = new InterfaceImplementationEdge
         {
@@ -119,11 +108,8 @@ public class InterfaceImplementationAnalyzer(
     /// <summary>
     /// Extracts interface method implementations
     /// </summary>
-    private void ExtractInterfaceMethodImplementations(
-        InterfaceImplementationEdge edge, 
-        INamedTypeSymbol interfaceSymbol, 
-        BaseTypeDeclarationSyntax classDeclaration, 
-        SemanticModel semanticModel)
+    private void ExtractInterfaceMethodImplementations(InterfaceImplementationEdge edge, INamedTypeSymbol interfaceSymbol, 
+        BaseTypeDeclarationSyntax classDeclaration, SemanticModel semanticModel)
     {
         try
         {
@@ -168,9 +154,7 @@ public class InterfaceImplementationAnalyzer(
     /// <summary>
     /// Finds the implementing method in the class for a given interface method
     /// </summary>
-    private MethodDeclarationSyntax? FindImplementingMethod(
-        List<MethodDeclarationSyntax> classMethods,
-        IMethodSymbol interfaceMethod)
+    private MethodDeclarationSyntax? FindImplementingMethod(List<MethodDeclarationSyntax> classMethods, IMethodSymbol interfaceMethod)
     {
         // Simple name-based matching - could be enhanced to include signature matching
         return classMethods.FirstOrDefault(m => 

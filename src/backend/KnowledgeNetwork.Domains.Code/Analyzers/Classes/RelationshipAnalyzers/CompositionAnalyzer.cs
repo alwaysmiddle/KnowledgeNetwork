@@ -1,5 +1,4 @@
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
-using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
 using KnowledgeNetwork.Domains.Code.Models.Classes;
 using KnowledgeNetwork.Domains.Code.Models.Classes.ClassEnums;
 using Microsoft.CodeAnalysis;
@@ -11,9 +10,7 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Classes.RelationshipAnalyzers;
 /// <summary>
 /// Analyzes composition relationships (has-a relationships through fields/properties)
 /// </summary>
-public class CompositionAnalyzer(
-    ILogger<CompositionAnalyzer> logger,
-    ISyntaxUtilities syntaxUtilities) : ICompositionAnalyzer
+public class CompositionAnalyzer(ILogger<CompositionAnalyzer> logger, ISyntaxUtilities syntaxUtilities) : ICompositionAnalyzer
 {
     private readonly ILogger<CompositionAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly ISyntaxUtilities _syntaxUtilities = syntaxUtilities ?? throw new ArgumentNullException(nameof(syntaxUtilities));
@@ -21,10 +18,7 @@ public class CompositionAnalyzer(
     /// <summary>
     /// Analyzes composition relationships within the provided type declarations
     /// </summary>
-    public async Task AnalyzeAsync(
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
-        List<BaseTypeDeclarationSyntax> typeDeclarations)
+    public async Task AnalyzeAsync(SemanticModel semanticModel, ClassRelationshipGraph graph, List<BaseTypeDeclarationSyntax> typeDeclarations)
     {
         _logger.LogDebug("Starting composition relationship analysis for {TypeCount} types", typeDeclarations.Count);
 
@@ -37,8 +31,7 @@ public class CompositionAnalyzer(
                 var classSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
                 if (classSymbol == null)
                 {
-                    _logger.LogWarning("Could not get symbol for type declaration: {TypeName}", 
-                        typeDeclaration.GetType().Name);
+                    _logger.LogWarning("Could not get symbol for type declaration: {TypeName}", typeDeclaration.GetType().Name);
                     continue;
                 }
 
@@ -53,7 +46,8 @@ public class CompositionAnalyzer(
                 var allMembers = _syntaxUtilities.GetAllMembers(typeDeclaration);
 
                 // Analyze fields for composition relationships
-                var fields = allMembers.OfType<FieldDeclarationSyntax>();
+                var memberDeclarationSyntaxes = allMembers as MemberDeclarationSyntax[] ?? allMembers.ToArray();
+                var fields = memberDeclarationSyntaxes.OfType<FieldDeclarationSyntax>();
                 foreach (var field in fields)
                 {
                     var memberName = field.Declaration.Variables.FirstOrDefault()?.Identifier.ValueText ?? "";
@@ -65,7 +59,7 @@ public class CompositionAnalyzer(
                 }
 
                 // Analyze properties for composition relationships  
-                var properties = allMembers.OfType<PropertyDeclarationSyntax>();
+                var properties = memberDeclarationSyntaxes.OfType<PropertyDeclarationSyntax>();
                 foreach (var property in properties)
                 {
                     if (AnalyzeCompositionFromMember(property.Type, property.Identifier.ValueText,
@@ -89,19 +83,12 @@ public class CompositionAnalyzer(
     /// <summary>
     /// Analyzes composition from a field or property
     /// </summary>
-    private bool AnalyzeCompositionFromMember(
-        TypeSyntax typeSyntax, 
-        string memberName, 
-        SemanticModel semanticModel, 
-        ClassRelationshipGraph graph, 
-        ClassNode containerClass, 
-        SyntaxNode memberNode, 
-        CompositionAccessType accessType)
+    private bool AnalyzeCompositionFromMember(TypeSyntax typeSyntax, string memberName, SemanticModel semanticModel,
+        ClassRelationshipGraph graph, ClassNode containerClass, SyntaxNode memberNode, CompositionAccessType accessType)
     {
         try
         {
-            var typeSymbol = semanticModel.GetSymbolInfo(typeSyntax).Symbol as ITypeSymbol;
-            if (typeSymbol == null)
+            if (semanticModel.GetSymbolInfo(typeSyntax).Symbol is not ITypeSymbol typeSymbol)
             {
                 _logger.LogTrace("Could not resolve type symbol for member: {MemberName}", memberName);
                 return false;
@@ -134,12 +121,8 @@ public class CompositionAnalyzer(
     /// <summary>
     /// Creates a composition edge from the analyzed components
     /// </summary>
-    private CompositionEdge CreateCompositionEdge(
-        ClassNode containerClass,
-        ITypeSymbol typeSymbol,
-        string memberName,
-        CompositionAccessType accessType,
-        SyntaxNode memberNode)
+    private CompositionEdge CreateCompositionEdge(ClassNode containerClass, ITypeSymbol typeSymbol, string memberName,
+        CompositionAccessType accessType, SyntaxNode memberNode) 
     {
         var compositionEdge = new CompositionEdge
         {
@@ -177,10 +160,7 @@ public class CompositionAnalyzer(
 
         // Skip system types
         var namespaceName = typeSymbol.ContainingNamespace?.ToDisplayString();
-        if (namespaceName?.StartsWith("System") == true)
-            return true;
-
-        return false;
+        return namespaceName?.StartsWith("System") == true;
     }
 
     /// <summary>
