@@ -4,28 +4,20 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging;
 using KnowledgeNetwork.Domains.Code.Models.Files;
 using KnowledgeNetwork.Domains.Code.Models.Common;
-using System.IO;
 
 namespace KnowledgeNetwork.Domains.Code.Analyzers.Files;
 
 /// <summary>
 /// Analyzes file-level dependencies within C# projects including using statements, namespace dependencies, and assembly references
 /// </summary>
-public class CSharpFileDependencyAnalyzer
+public class CSharpFileDependencyAnalyzer(ILogger<CSharpFileDependencyAnalyzer> logger)
 {
-    private readonly ILogger<CSharpFileDependencyAnalyzer> _logger;
-
-    public CSharpFileDependencyAnalyzer(ILogger<CSharpFileDependencyAnalyzer> logger)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+    private readonly ILogger<CSharpFileDependencyAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     /// <summary>
     /// Analyzes file dependencies within a compilation (project-level analysis)
     /// </summary>
-    public async Task<FileDependencyGraph?> AnalyzeProjectAsync(
-        Compilation compilation,
-        string projectName = "",
+    public async Task<FileDependencyGraph?> AnalyzeProjectAsync(Compilation compilation, string projectName = "",
         string projectPath = "")
     {
         try
@@ -85,7 +77,7 @@ public class CSharpFileDependencyAnalyzer
             if (string.IsNullOrEmpty(filePath)) return null;
 
             var semanticModel = compilation.GetSemanticModel(syntaxTree);
-            var root = syntaxTree.GetRoot();
+            var root = await syntaxTree.GetRootAsync();
 
             var fileNode = new FileNode
             {
@@ -395,7 +387,7 @@ public class CSharpFileDependencyAnalyzer
             var syntaxTree = compilation.SyntaxTrees.FirstOrDefault(st => st.FilePath == sourceFile.FilePath);
             if (syntaxTree == null) continue;
 
-            var root = syntaxTree.GetRoot();
+            var root = await syntaxTree.GetRootAsync();
             var usingDirectives = root.DescendantNodes().OfType<UsingDirectiveSyntax>().ToList();
 
             foreach (var usingDirective in usingDirectives)
@@ -579,11 +571,11 @@ public class CSharpFileDependencyAnalyzer
     {
         return referenceKind switch
         {
-            TypeReferenceKind.Inheritance => new List<TypeUsageKind> { TypeUsageKind.Inheritance },
-            TypeReferenceKind.Interface => new List<TypeUsageKind> { TypeUsageKind.InterfaceImplementation },
-            TypeReferenceKind.GenericParameter => new List<TypeUsageKind> { TypeUsageKind.GenericArgument },
-            TypeReferenceKind.Attribute => new List<TypeUsageKind> { TypeUsageKind.Attribute },
-            _ => new List<TypeUsageKind> { TypeUsageKind.Declaration }
+            TypeReferenceKind.Inheritance => [TypeUsageKind.Inheritance],
+            TypeReferenceKind.Interface => [TypeUsageKind.InterfaceImplementation],
+            TypeReferenceKind.GenericParameter => [TypeUsageKind.GenericArgument],
+            TypeReferenceKind.Attribute => [TypeUsageKind.Attribute],
+            _ => [TypeUsageKind.Declaration]
         };
     }
 
@@ -652,11 +644,11 @@ public class CSharpFileDependencyAnalyzer
     {
         return referenceKind switch
         {
-            TypeReferenceKind.Inheritance => new List<TypeUsagePattern> { TypeUsagePattern.FieldDeclaration },
-            TypeReferenceKind.Attribute => new List<TypeUsagePattern> { TypeUsagePattern.AttributeApplication },
-            TypeReferenceKind.GenericParameter => new List<TypeUsagePattern> { TypeUsagePattern.GenericConstraint },
-            TypeReferenceKind.Reflection => new List<TypeUsagePattern> { TypeUsagePattern.ReflectionUsage },
-            _ => new List<TypeUsagePattern> { TypeUsagePattern.LocalVariable }
+            TypeReferenceKind.Inheritance => [TypeUsagePattern.FieldDeclaration],
+            TypeReferenceKind.Attribute => [TypeUsagePattern.AttributeApplication],
+            TypeReferenceKind.GenericParameter => [TypeUsagePattern.GenericConstraint],
+            TypeReferenceKind.Reflection => [TypeUsagePattern.ReflectionUsage],
+            _ => [TypeUsagePattern.LocalVariable]
         };
     }
 
@@ -814,7 +806,7 @@ public class CSharpFileDependencyAnalyzer
         
         // Well-known third-party libraries (this would be expanded in practice)
         var trustedAssemblies = new[] { "Newtonsoft.Json", "AutoMapper", "Serilog" };
-        if (trustedAssemblies.Any(trusted => assemblyName.StartsWith(trusted)))
+        if (trustedAssemblies.Any(assemblyName.StartsWith))
             return SecurityRiskLevel.Low;
         
         return SecurityRiskLevel.Unknown;

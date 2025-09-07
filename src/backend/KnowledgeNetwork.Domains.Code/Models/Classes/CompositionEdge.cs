@@ -1,3 +1,4 @@
+using KnowledgeNetwork.Domains.Code.Models.Classes.ClassEnums;
 using KnowledgeNetwork.Domains.Code.Models.Common;
 
 namespace KnowledgeNetwork.Domains.Code.Models.Classes;
@@ -65,7 +66,7 @@ public class CompositionEdge
     /// <summary>
     /// Generic type arguments if applicable
     /// </summary>
-    public List<string> GenericTypeArguments { get; set; } = new();
+    public List<string> GenericTypeArguments { get; set; } = [];
 
     /// <summary>
     /// Visibility of the member creating this relationship
@@ -81,92 +82,4 @@ public class CompositionEdge
     /// Additional metadata
     /// </summary>
     public Dictionary<string, object> Metadata { get; set; } = new();
-}
-
-/// <summary>
-/// Types of composition relationships
-/// </summary>
-public enum CompositionType
-{
-    /// <summary>
-    /// Weak composition - contained object can exist independently
-    /// </summary>
-    Aggregation,
-
-    /// <summary>
-    /// Strong composition - contained object's lifetime is tied to container
-    /// </summary>
-    Composition,
-
-    /// <summary>
-    /// Association - loose relationship, typically through method parameters or return types
-    /// </summary>
-    Association,
-
-    /// <summary>
-    /// Dependency - uses the other class but doesn't store a reference
-    /// </summary>
-    Dependency
-}
-
-/// <summary>
-/// How the composed object is accessed
-/// </summary>
-public enum CompositionAccessType
-{
-    /// <summary>
-    /// Direct field access
-    /// </summary>
-    Field,
-
-    /// <summary>
-    /// Property access
-    /// </summary>
-    Property,
-
-    /// <summary>
-    /// Collection (List, Array, etc.)
-    /// </summary>
-    Collection,
-
-    /// <summary>
-    /// Dictionary or map
-    /// </summary>
-    Dictionary,
-
-    /// <summary>
-    /// Auto-property
-    /// </summary>
-    AutoProperty,
-
-    /// <summary>
-    /// Constructor parameter
-    /// </summary>
-    Constructor
-}
-
-/// <summary>
-/// Multiplicity of the composition relationship
-/// </summary>
-public enum CompositionMultiplicity
-{
-    /// <summary>
-    /// Single instance (1:1)
-    /// </summary>
-    One,
-
-    /// <summary>
-    /// Optional single instance (0:1)
-    /// </summary>
-    ZeroOrOne,
-
-    /// <summary>
-    /// Multiple instances (1:many)
-    /// </summary>
-    Many,
-
-    /// <summary>
-    /// Optional multiple instances (0:many)
-    /// </summary>
-    ZeroOrMany
 }
