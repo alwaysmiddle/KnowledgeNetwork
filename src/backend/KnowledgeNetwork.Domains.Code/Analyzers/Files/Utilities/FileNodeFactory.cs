@@ -8,13 +8,8 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Files.Utilities;
 /// <summary>
 /// Factory for creating FileNode instances with complete metadata and content analysis
 /// </summary>
-public class FileNodeFactory(
-    ILogger<FileNodeFactory> logger,
-    IFilePathResolver filePathResolver,
-    IFileSyntaxUtilities syntaxUtilities,
-    IUsingDirectiveExtractor usingDirectiveExtractor,
-    INamespaceExtractor namespaceExtractor,
-    ITypeExtractor typeExtractor,
+public class FileNodeFactory(ILogger<FileNodeFactory> logger, IFilePathResolver filePathResolver, IFileSyntaxUtilities syntaxUtilities,
+    IUsingDirectiveExtractor usingDirectiveExtractor, INamespaceExtractor namespaceExtractor, ITypeExtractor typeExtractor,
     IFileMetricsCalculator metricsCalculator) : IFileNodeFactory
 {
     private readonly ILogger<FileNodeFactory> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
