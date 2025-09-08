@@ -1,5 +1,4 @@
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
-using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
 using KnowledgeNetwork.Domains.Code.Models.Classes;
 using KnowledgeNetwork.Domains.Code.Models.Classes.ClassEnums;
 using Microsoft.CodeAnalysis;
