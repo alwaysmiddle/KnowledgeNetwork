@@ -10,14 +10,12 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Files.DependencyAnalyzers;
 /// </summary>
 public class NamespaceDependencyAnalyzer(ILogger<NamespaceDependencyAnalyzer> logger) : INamespaceDependencyAnalyzer
 {
-    private readonly ILogger<NamespaceDependencyAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
     /// <summary>
     /// Analyzes namespace dependencies between files in the graph
     /// </summary>
     public async Task AnalyzeAsync(Compilation compilation, FileDependencyGraph graph)
     {
-        _logger.LogDebug("Starting namespace dependency analysis for {FileCount} files", graph.Files.Count);
+        logger.LogDebug("Starting namespace dependency analysis for {FileCount} files", graph.Files.Count);
 
         try
         {
@@ -64,16 +62,16 @@ public class NamespaceDependencyAnalyzer(ILogger<NamespaceDependencyAnalyzer> lo
                     graph.NamespaceDependencies.Add(namespaceDependency);
                     dependencyCount++;
                     
-                    _logger.LogTrace("Found namespace dependency: {SourceFile} depends on namespace {TargetNamespace} in {TargetFile}",
+                    logger.LogTrace("Found namespace dependency: {SourceFile} depends on namespace {TargetNamespace} in {TargetFile}",
                         sourceFile.FileName, referencedType.Namespace, targetFile.FileName);
                 }
             }
 
-            _logger.LogDebug("Completed namespace dependency analysis. Found {DependencyCount} namespace dependencies", dependencyCount);
+            logger.LogDebug("Completed namespace dependency analysis. Found {DependencyCount} namespace dependencies", dependencyCount);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during namespace dependency analysis");
+            logger.LogError(ex, "Error during namespace dependency analysis");
             throw;
         }
     }

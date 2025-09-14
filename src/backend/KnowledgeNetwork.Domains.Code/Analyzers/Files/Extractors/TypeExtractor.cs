@@ -11,8 +11,6 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Files.Extractors;
 /// </summary>
 public class TypeExtractor(IFileSyntaxUtilities syntaxUtilities) : ITypeExtractor
 {
-    private readonly IFileSyntaxUtilities _syntaxUtilities = syntaxUtilities ?? throw new ArgumentNullException(nameof(syntaxUtilities));
-
     /// <summary>
     /// Extracts declared types from a syntax tree and populates the file node
     /// </summary>
@@ -22,23 +20,21 @@ public class TypeExtractor(IFileSyntaxUtilities syntaxUtilities) : ITypeExtracto
         
         foreach (var typeDeclaration in typeDeclarations)
         {
-            var typeSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration) as INamedTypeSymbol;
-            if (typeSymbol != null)
+            if (semanticModel.GetDeclaredSymbol(typeDeclaration) is not INamedTypeSymbol typeSymbol) continue;
+            
+            var declaredType = new DeclaredType
             {
-                var declaredType = new DeclaredType
-                {
-                    Name = typeSymbol.Name,
-                    FullName = typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                    Namespace = typeSymbol.ContainingNamespace?.ToDisplayString() ?? string.Empty,
-                    TypeKind = typeSymbol.TypeKind.ToString(),
-                    Visibility = typeSymbol.DeclaredAccessibility.ToString(),
-                    IsStatic = typeSymbol.IsStatic,
-                    IsGeneric = typeSymbol.IsGenericType,
-                    Location = _syntaxUtilities.GetLocationInfo(typeDeclaration)
-                };
+                Name = typeSymbol.Name,
+                FullName = typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                Namespace = typeSymbol.ContainingNamespace?.ToDisplayString() ?? string.Empty,
+                TypeKind = typeSymbol.TypeKind.ToString(),
+                Visibility = typeSymbol.DeclaredAccessibility.ToString(),
+                IsStatic = typeSymbol.IsStatic,
+                IsGeneric = typeSymbol.IsGenericType,
+                Location = syntaxUtilities.GetLocationInfo(typeDeclaration)
+            };
 
-                fileNode.DeclaredTypes.Add(declaredType);
-            }
+            fileNode.DeclaredTypes.Add(declaredType);
         }
     }
 
@@ -55,36 +51,35 @@ public class TypeExtractor(IFileSyntaxUtilities syntaxUtilities) : ITypeExtracto
         foreach (var identifier in identifierNodes)
         {
             var symbolInfo = semanticModel.GetSymbolInfo(identifier);
-            if (symbolInfo.Symbol is ITypeSymbol typeSymbol)
-            {
-                var fullName = typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            if (symbolInfo.Symbol is not ITypeSymbol typeSymbol) continue;
+            
+            var fullName = typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 
-                // Skip primitive types and declared types in the same file
-                if (typeSymbol.SpecialType != SpecialType.None || 
-                    fileNode.DeclaredTypes.Any(dt => dt.FullName == fullName))
-                    continue;
+            // Skip primitive types and declared types in the same file
+            if (typeSymbol.SpecialType != SpecialType.None || 
+                fileNode.DeclaredTypes.Any(dt => dt.FullName == fullName))
+                continue;
 
-                if (!referencedTypes.ContainsKey(fullName))
+            if (!referencedTypes.TryGetValue(fullName, out var value))
+            {
+                var referencedType = new ReferencedType
                 {
-                    var referencedType = new ReferencedType
-                    {
-                        Name = typeSymbol.Name,
-                        FullName = fullName,
-                        Namespace = typeSymbol.ContainingNamespace?.ToDisplayString() ?? string.Empty,
-                        Assembly = typeSymbol.ContainingAssembly?.Name ?? string.Empty,
-                        ReferenceKind = DetermineReferenceKind(identifier, semanticModel),
-                        IsExternal = typeSymbol.ContainingAssembly != semanticModel.Compilation.Assembly,
-                        ReferenceCount = 1,
-                        ReferenceLocations = new List<CSharpLocationInfo> { _syntaxUtilities.GetLocationInfo(identifier) }
-                    };
+                    Name = typeSymbol.Name,
+                    FullName = fullName,
+                    Namespace = typeSymbol.ContainingNamespace?.ToDisplayString() ?? string.Empty,
+                    Assembly = typeSymbol.ContainingAssembly?.Name ?? string.Empty,
+                    ReferenceKind = DetermineReferenceKind(identifier, semanticModel),
+                    IsExternal = typeSymbol.ContainingAssembly != semanticModel.Compilation.Assembly,
+                    ReferenceCount = 1,
+                    ReferenceLocations = new List<CSharpLocationInfo> { syntaxUtilities.GetLocationInfo(identifier) }
+                };
 
-                    referencedTypes.Add(fullName, referencedType);
-                }
-                else
-                {
-                    referencedTypes[fullName].ReferenceCount++;
-                    referencedTypes[fullName].ReferenceLocations.Add(_syntaxUtilities.GetLocationInfo(identifier));
-                }
+                referencedTypes.Add(fullName, referencedType);
+            }
+            else
+            {
+                value.ReferenceCount++;
+                value.ReferenceLocations.Add(syntaxUtilities.GetLocationInfo(identifier));
             }
         }
 

@@ -10,14 +10,12 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Files.DependencyAnalyzers;
 /// </summary>
 public class TypeReferenceDependencyAnalyzer(ILogger<TypeReferenceDependencyAnalyzer> logger) : ITypeReferenceDependencyAnalyzer
 {
-    private readonly ILogger<TypeReferenceDependencyAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
     /// <summary>
     /// Analyzes type reference dependencies between files in the graph
     /// </summary>
     public async Task AnalyzeAsync(Compilation compilation, FileDependencyGraph graph)
     {
-        _logger.LogDebug("Starting type reference dependency analysis for {FileCount} files", graph.Files.Count);
+        logger.LogDebug("Starting type reference dependency analysis for {FileCount} files", graph.Files.Count);
 
         try
         {
@@ -53,16 +51,16 @@ public class TypeReferenceDependencyAnalyzer(ILogger<TypeReferenceDependencyAnal
                         dependencyCount++;
                     }
 
-                    _logger.LogTrace("Found type reference dependency: {SourceFile} depends on type {TypeName} in {TargetFile}",
+                    logger.LogTrace("Found type reference dependency: {SourceFile} depends on type {TypeName} in {TargetFile}",
                         sourceFile.FileName, referencedType.Name, targetFile.FileName);
                 }
             }
 
-            _logger.LogDebug("Completed type reference dependency analysis. Found {DependencyCount} type dependencies", dependencyCount);
+            logger.LogDebug("Completed type reference dependency analysis. Found {DependencyCount} type dependencies", dependencyCount);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during type reference dependency analysis");
+            logger.LogError(ex, "Error during type reference dependency analysis");
             throw;
         }
     }

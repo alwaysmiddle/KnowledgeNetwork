@@ -10,14 +10,12 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Files.DependencyAnalyzers;
 /// </summary>
 public class AssemblyDependencyAnalyzer(ILogger<AssemblyDependencyAnalyzer> logger) : IAssemblyDependencyAnalyzer
 {
-    private readonly ILogger<AssemblyDependencyAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
     /// <summary>
     /// Analyzes external assembly dependencies for all files in the graph
     /// </summary>
     public async Task AnalyzeAsync(Compilation compilation, FileDependencyGraph graph)
     {
-        _logger.LogDebug("Starting assembly dependency analysis for {FileCount} files", graph.Files.Count);
+        logger.LogDebug("Starting assembly dependency analysis for {FileCount} files", graph.Files.Count);
 
         try
         {
@@ -53,7 +51,7 @@ public class AssemblyDependencyAnalyzer(ILogger<AssemblyDependencyAnalyzer> logg
                     graph.AssemblyDependencies.Add(assemblyDependency);
                     dependencyCount++;
 
-                    _logger.LogTrace("Found assembly dependency: {SourceFile} depends on assembly {AssemblyName}",
+                    logger.LogTrace("Found assembly dependency: {SourceFile} depends on assembly {AssemblyName}",
                         sourceFile.FileName, referencedType.Assembly);
                 }
 
@@ -78,16 +76,16 @@ public class AssemblyDependencyAnalyzer(ILogger<AssemblyDependencyAnalyzer> logg
                     graph.AssemblyDependencies.Add(assemblyDependency);
                     dependencyCount++;
 
-                    _logger.LogTrace("Found explicit assembly dependency: {SourceFile} references assembly {AssemblyName}",
+                    logger.LogTrace("Found explicit assembly dependency: {SourceFile} references assembly {AssemblyName}",
                         sourceFile.FileName, assemblyReference);
                 }
             }
 
-            _logger.LogDebug("Completed assembly dependency analysis. Found {DependencyCount} assembly dependencies", dependencyCount);
+            logger.LogDebug("Completed assembly dependency analysis. Found {DependencyCount} assembly dependencies", dependencyCount);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during assembly dependency analysis");
+            logger.LogError(ex, "Error during assembly dependency analysis");
             throw;
         }
     }
@@ -118,7 +116,7 @@ public class AssemblyDependencyAnalyzer(ILogger<AssemblyDependencyAnalyzer> logg
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get assembly info for {AssemblyName}", assemblyName);
+            logger.LogWarning(ex, "Failed to get assembly info for {AssemblyName}", assemblyName);
             return null;
         }
     }

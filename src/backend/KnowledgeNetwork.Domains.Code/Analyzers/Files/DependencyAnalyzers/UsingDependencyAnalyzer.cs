@@ -12,9 +12,6 @@ namespace KnowledgeNetwork.Domains.Code.Analyzers.Files.DependencyAnalyzers;
 /// </summary>
 public class UsingDependencyAnalyzer(ILogger<UsingDependencyAnalyzer> logger, IFileSyntaxUtilities syntaxUtilities) : IUsingDependencyAnalyzer
 {
-    private readonly ILogger<UsingDependencyAnalyzer> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    private readonly IFileSyntaxUtilities _syntaxUtilities = syntaxUtilities ?? throw new ArgumentNullException(nameof(syntaxUtilities));
-
     /// <summary>
     /// Analyzes using directive dependencies between files in the graph
     /// </summary>
@@ -49,7 +46,7 @@ public class UsingDependencyAnalyzer(ILogger<UsingDependencyAnalyzer> logger, IF
                     IsAlias = usingDirective.Alias != null,
                     AliasName = usingDirective.Alias?.Name.ToString(),
                     IsExternalAssembly = targetFile == null,
-                    UsingLocation = _syntaxUtilities.GetLocationInfo(usingDirective)
+                    UsingLocation = syntaxUtilities.GetLocationInfo(usingDirective)
                 };
 
                 // Check if the using is actually utilized
