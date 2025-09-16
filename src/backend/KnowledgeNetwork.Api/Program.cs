@@ -5,6 +5,11 @@ using KnowledgeNetwork.Domains.Code.Analyzers.Classes;
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Abstractions;
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.RelationshipAnalyzers;
 using KnowledgeNetwork.Domains.Code.Analyzers.Classes.Utilities;
+using KnowledgeNetwork.Domains.Code.Analyzers.Files;
+using KnowledgeNetwork.Domains.Code.Analyzers.Files.Abstractions;
+using KnowledgeNetwork.Domains.Code.Analyzers.Files.DependencyAnalyzers;
+using KnowledgeNetwork.Domains.Code.Analyzers.Files.Extractors;
+using KnowledgeNetwork.Domains.Code.Analyzers.Files.Utilities;
 using ICSharpMethodBlockAnalyzer = KnowledgeNetwork.Domains.Code.Analyzers.Blocks.Abstractions.ICSharpMethodBlockAnalyzer;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +43,29 @@ builder.Services.AddScoped<INestedClassAnalyzer, NestedClassAnalyzer>();
 // Main class relationship analyzer (orchestrates the specialized analyzers above)
 builder.Services.AddScoped<ICSharpClassRelationshipAnalyzer, CSharpClassRelationshipAnalyzer>();
 builder.Services.AddScoped<CSharpClassRelationshipAnalyzer>(); // Keep concrete registration for backward compatibility
+
+// File dependency analysis utilities
+builder.Services.AddScoped<IFilePathResolver, FilePathResolver>();
+builder.Services.AddScoped<IFileMetricsCalculator, FileMetricsCalculator>();
+builder.Services.AddScoped<IFileSyntaxUtilities, FileSyntaxUtilities>();
+
+// Content extractors
+builder.Services.AddScoped<IUsingDirectiveExtractor, UsingDirectiveExtractor>();
+builder.Services.AddScoped<INamespaceExtractor, NamespaceExtractor>();
+builder.Services.AddScoped<ITypeExtractor, TypeExtractor>();
+
+// File node factory (orchestrates the extractors above)
+builder.Services.AddScoped<IFileNodeFactory, FileNodeFactory>();
+
+// Dependency analyzers
+builder.Services.AddScoped<IUsingDependencyAnalyzer, UsingDependencyAnalyzer>();
+builder.Services.AddScoped<INamespaceDependencyAnalyzer, NamespaceDependencyAnalyzer>();
+builder.Services.AddScoped<ITypeReferenceDependencyAnalyzer, TypeReferenceDependencyAnalyzer>();
+builder.Services.AddScoped<IAssemblyDependencyAnalyzer, AssemblyDependencyAnalyzer>();
+
+// Main file dependency analyzer (orchestrates the specialized analyzers above)
+builder.Services.AddScoped<ICSharpFileDependencyAnalyzer, CSharpFileDependencyAnalyzer>();
+builder.Services.AddScoped<CSharpFileDependencyAnalyzer>(); // Keep concrete registration for backward compatibility
 
 // Higher-level analysis service
 builder.Services.AddScoped<CSharpAnalysisService>();
