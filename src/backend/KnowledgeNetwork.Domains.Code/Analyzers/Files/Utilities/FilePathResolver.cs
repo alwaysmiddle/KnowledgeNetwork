@@ -17,12 +17,9 @@ public class FilePathResolver : IFilePathResolver
         var uri = new Uri(currentDirectory + Path.DirectorySeparatorChar);
         var fileUri = new Uri(filePath);
         
-        if (uri.IsBaseOf(fileUri))
-        {
-            return Uri.UnescapeDataString(uri.MakeRelativeUri(fileUri).ToString().Replace('/', Path.DirectorySeparatorChar));
-        }
-        
-        return filePath;
+        return uri.IsBaseOf(fileUri) 
+            ? Uri.UnescapeDataString(uri.MakeRelativeUri(fileUri).ToString().Replace('/', Path.DirectorySeparatorChar)) 
+            : filePath;
     }
 
     /// <summary>

@@ -34,10 +34,8 @@ public class AssemblyDependencyAnalyzer(ILogger<AssemblyDependencyAnalyzer> logg
                     var assemblyKey = $"{sourceFile.Id}:{referencedType.Assembly}";
                     
                     // Skip if we've already processed this file-assembly combination
-                    if (processedAssemblies.Contains(assemblyKey))
+                    if (!processedAssemblies.Add(assemblyKey))
                         continue;
-
-                    processedAssemblies.Add(assemblyKey);
 
                     // Try to get assembly information from compilation
                     var assemblyInfo = GetAssemblyInfo(compilation, referencedType.Assembly);
@@ -60,10 +58,8 @@ public class AssemblyDependencyAnalyzer(ILogger<AssemblyDependencyAnalyzer> logg
                 {
                     var assemblyKey = $"{sourceFile.Id}:{assemblyReference}";
                     
-                    if (processedAssemblies.Contains(assemblyKey))
+                    if (!processedAssemblies.Add(assemblyKey))
                         continue;
-
-                    processedAssemblies.Add(assemblyKey);
 
                     var assemblyInfo = GetAssemblyInfo(compilation, assemblyReference);
                     if (assemblyInfo == null) continue;

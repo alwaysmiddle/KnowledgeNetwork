@@ -12,14 +12,6 @@ public class FileNodeFactory(ILogger<FileNodeFactory> logger, IFilePathResolver 
     IUsingDirectiveExtractor usingDirectiveExtractor, INamespaceExtractor namespaceExtractor, ITypeExtractor typeExtractor,
     IFileMetricsCalculator metricsCalculator) : IFileNodeFactory
 {
-    private readonly ILogger<FileNodeFactory> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    private readonly IFilePathResolver _filePathResolver = filePathResolver ?? throw new ArgumentNullException(nameof(filePathResolver));
-    private readonly IFileSyntaxUtilities _syntaxUtilities = syntaxUtilities ?? throw new ArgumentNullException(nameof(syntaxUtilities));
-    private readonly IUsingDirectiveExtractor _usingDirectiveExtractor = usingDirectiveExtractor ?? throw new ArgumentNullException(nameof(usingDirectiveExtractor));
-    private readonly INamespaceExtractor _namespaceExtractor = namespaceExtractor ?? throw new ArgumentNullException(nameof(namespaceExtractor));
-    private readonly ITypeExtractor _typeExtractor = typeExtractor ?? throw new ArgumentNullException(nameof(typeExtractor));
-    private readonly IFileMetricsCalculator _metricsCalculator = metricsCalculator ?? throw new ArgumentNullException(nameof(metricsCalculator));
-
     /// <summary>
     /// Creates a complete file node from a syntax tree with all metadata and content extracted
     /// </summary>
@@ -37,16 +29,16 @@ public class FileNodeFactory(ILogger<FileNodeFactory> logger, IFilePathResolver 
             {
                 FilePath = filePath,
                 FileName = Path.GetFileName(filePath),
-                RelativePath = _filePathResolver.GetRelativePath(filePath),
+                RelativePath = filePathResolver.GetRelativePath(filePath),
                 DirectoryPath = Path.GetDirectoryName(filePath) ?? string.Empty,
                 FileExtension = Path.GetExtension(filePath),
                 Language = FileLanguage.CSharp,
                 ProjectName = projectName,
-                Location = _syntaxUtilities.GetLocationInfo(root)
+                Location = syntaxUtilities.GetLocationInfo(root)
             };
 
             // Determine file type
-            fileNode.FileType = _filePathResolver.DetermineFileType(fileNode.FileName, filePath);
+            fileNode.FileType = filePathResolver.DetermineFileType(fileNode.FileName, filePath);
 
             // Get file size and last modified time
             if (File.Exists(filePath))
@@ -57,25 +49,25 @@ public class FileNodeFactory(ILogger<FileNodeFactory> logger, IFilePathResolver 
             }
 
             // Extract using directives
-            _usingDirectiveExtractor.ExtractUsingDirectives(fileNode, root);
+            usingDirectiveExtractor.ExtractUsingDirectives(fileNode, root);
 
             // Extract declared namespaces
-            _namespaceExtractor.ExtractDeclaredNamespaces(fileNode, root);
+            namespaceExtractor.ExtractDeclaredNamespaces(fileNode, root);
 
             // Extract declared types
-            await _typeExtractor.ExtractDeclaredTypesAsync(fileNode, root, semanticModel);
+            await typeExtractor.ExtractDeclaredTypesAsync(fileNode, root, semanticModel);
 
             // Extract referenced types
-            await _typeExtractor.ExtractReferencedTypesAsync(fileNode, root, semanticModel);
+            await typeExtractor.ExtractReferencedTypesAsync(fileNode, root, semanticModel);
 
             // Calculate metrics
-            fileNode.Metrics = _metricsCalculator.CalculateFileMetrics(fileNode, root);
+            fileNode.Metrics = metricsCalculator.CalculateFileMetrics(fileNode, root);
 
             return fileNode;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to create file node for syntax tree: {FilePath}", syntaxTree.FilePath);
+            logger.LogWarning(ex, "Failed to create file node for syntax tree: {FilePath}", syntaxTree.FilePath);
             return null;
         }
     }
